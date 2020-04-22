@@ -14,20 +14,18 @@ let cfg = require('./switch.cfg'),
 		'Content-type': 'text/html',
 		'Accept-Encoding': 'gzip, deflate'
 	},
-	page = "/pgajax.axd?T=SyncImages";
-const TIME_DELAY_EACH_DOWNLOADING_FILE = 150;
+	page = "/pgajax.axd?T=SyncImages",
+	isLog = false;
+const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000;
 
 async function saveFile(fileName, content) {
 	return new Promise((resolve, reject) => {
 		fs.writeFile(fileName, content, function (err) {
 			if (err) reject(err)
-			//var statusText = 'write file > ' + fileName + ' success'
-			//log(statusText)
 			resolve(true)
 		})
 	})
 }
-
 async function getPaths(host, stringSplit) {
 	let protocol = cfg.protocol,
 		url = protocol + host + page,
@@ -39,13 +37,12 @@ async function getPaths(host, stringSplit) {
 				return body.replace(/\\/g, "/");
 			}
 		}
-	log("Syncing :%s", url);
+	//log("Get Paths :%s", url);
 	var paths = await rp(options)
 	paths = JSON.parse(paths);
-	paths = this.formatPath(paths, stringSplit);
+	paths = formatPath(paths, stringSplit);
 	return paths;
 }
-
 /**
 * stringSplit(Images,C:\\...)
 */
@@ -75,27 +72,21 @@ async function fetchTextFile(url) {
 			gzip: true
 		})
 	} catch (error) {
-		log(error)
+		log(`Message=${error.message.substring(0, 3)} ==> fetchTextFile:${url}`)
 	}
 }
 async function downloadFile(pathImage, host, syncFolder) {
-	// prepare folders
 	//log('pathImage:%s', pathImage)
 	let url = cfg.protocol + host + '/' + pathImage,
 		rootFolderImages = cfg.rootFolderImages,
 		fileName = pathImage.split('/').slice(-1)[0],
 		fullFileName = rootFolderImages + pathImage,
 		dir = rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName) - 1)
-	log(fullFileName)
 	if (syncFolder) {
 		dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
 		fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
 	}
-	log(fullFileName)
-	//log(dir)
-	//log(url)
 	if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
-	// fetch image from internet
 	try {
 		switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
 			case 'js':
@@ -108,8 +99,8 @@ async function downloadFile(pathImage, host, syncFolder) {
 			default:
 				request(url)
 					.on('error', err => {
-						log('==> error at pathImage: %s', pathImage)
-						//log(err)
+						log('404 ==> fetchTextFile: %s', url)
+						log(err)
 					})
 					//.on('response', response => log(response.statusCode))
 					.pipe(fs.createWriteStream(fullFileName));
@@ -120,17 +111,16 @@ async function downloadFile(pathImage, host, syncFolder) {
 	} catch (error) {
 		log(`${error.statusCode} ==> ${pathImage}`)
 	}
-
 }
 async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 	let currentPath = paths[indexPath];
-	log("paths[%s]=%s", indexPath, currentPath);
-	downloadFile(currentPath, host, syncFolder);
+	if (isLog) log("paths[%s]=%s", indexPath, currentPath);
+	await downloadFile(currentPath, host, syncFolder);
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
 		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE);
 	else {
-		log("Downloaded %s files in Images folder", paths.length);
+		log("Downloaded %s files to %s folder", paths.length, syncFolder);
 		next()
 	}
 }
@@ -152,12 +142,23 @@ async function getDHNumber(whiteLabelName) {
 		log(error)
 	}
 }
-
-// save image to Images_WLs\Images_<WhiteLabelName
+// save image to Images_WLs\Images_<WhiteLabelName>
 async function syncImagesWL(whiteLabelName) {
+	whiteLabelName = whiteLabelName.toUpperCase()
+	log('Syncing %s', whiteLabelName)
 	let host = 'www.' + whiteLabelName + '.com',
-		paths = await sync.getPaths(host, 'WebUI')
-	downloadFiles(0, paths, host, () => log('Done'))
+		syncFolder = 'Images_' + whiteLabelName,
+		paths = await getPaths(host, 'WebUI')
+	downloadFiles(0, paths, host, () => log('Synced Images of %s', whiteLabelName), syncFolder)
+}
+async function syncImagesWLs(index, whiteLabelNames, next) {
+	let currentWhiteLabelName = whiteLabelNames[index]
+	await syncImagesWL(currentWhiteLabelName)
+	index = index + 1
+	if (index < whiteLabelNames.length)
+		await syncImagesWLs(index, whiteLabelNames, next)
+	else
+		next()
 }
 module.exports = {
 	getPaths: getPaths,
@@ -165,5 +166,7 @@ module.exports = {
 	downloadFile: downloadFile,
 	downloadFiles: downloadFiles,
 	getSwitchCfg: getSwitchCfg,
-	getDHNumber: getDHNumber
+	getDHNumber: getDHNumber,
+	syncImagesWL: syncImagesWL,
+	syncImagesWLs: syncImagesWLs
 };
