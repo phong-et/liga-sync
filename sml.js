@@ -78,7 +78,7 @@ async function fetchTextFile(url) {
 		log(error)
 	}
 }
-async function downloadFile(pathImage, host) {
+async function downloadFile(pathImage, host, syncFolder) {
 	// prepare folders
 	//log('pathImage:%s', pathImage)
 	let url = cfg.protocol + host + '/' + pathImage,
@@ -86,6 +86,12 @@ async function downloadFile(pathImage, host) {
 		fileName = pathImage.split('/').slice(-1)[0],
 		fullFileName = rootFolderImages + pathImage,
 		dir = rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName) - 1)
+	log(fullFileName)
+	if (syncFolder) {
+		dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
+		fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
+	}
+	log(fullFileName)
 	//log(dir)
 	//log(url)
 	if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
@@ -97,7 +103,7 @@ async function downloadFile(pathImage, host) {
 			case 'htm':
 			case 'html':
 			case 'download':
-				saveFile(rootFolderImages + pathImage, await fetchTextFile(url))
+				saveFile(fullFileName, await fetchTextFile(url))
 				break;
 			default:
 				request(url)
@@ -106,7 +112,7 @@ async function downloadFile(pathImage, host) {
 						//log(err)
 					})
 					//.on('response', response => log(response.statusCode))
-					.pipe(fs.createWriteStream(rootFolderImages + pathImage));
+					.pipe(fs.createWriteStream(fullFileName));
 				// error msg is red, cant overwrite it
 				//rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
 				break;
@@ -116,13 +122,13 @@ async function downloadFile(pathImage, host) {
 	}
 
 }
-async function downloadFiles(indexPath, paths, host, next) {
+async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 	let currentPath = paths[indexPath];
 	log("paths[%s]=%s", indexPath, currentPath);
-	downloadFile(currentPath, host);
+	downloadFile(currentPath, host, syncFolder);
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
-		setTimeout(async () => await downloadFiles(indexPath, paths, host, next), TIME_DELAY_EACH_DOWNLOADING_FILE);
+		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE);
 	else {
 		log("Downloaded %s files in Images folder", paths.length);
 		next()
@@ -149,7 +155,9 @@ async function getDHNumber(whiteLabelName) {
 
 // save image to Images_WLs\Images_<WhiteLabelName
 async function syncImagesWL(whiteLabelName) {
-
+	let host = 'www.' + whiteLabelName + '.com',
+		paths = await sync.getPaths(host, 'WebUI')
+	downloadFiles(0, paths, host, () => log('Done'))
 }
 module.exports = {
 	getPaths: getPaths,
@@ -159,17 +167,3 @@ module.exports = {
 	getSwitchCfg: getSwitchCfg,
 	getDHNumber: getDHNumber
 };
-
-// test 
-(async function () {
-	var sync = require('./sml')
-	//============================ test download image
-	//var host = 'www.hahaha.com'
-	//var paths = await sync.getPaths(host, 'WebUI')
-	//log(paths)
-	//sync.downloadFile(paths[0], host)
-	//await sync.downloadFiles(0, paths, host, () => log('Done'))
-	//============================ test getSwitchCfg
-	//log(await sync.getSwitchCfg())
-	log(await sync.getDHNumber('hahaha'))
-})()
