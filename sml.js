@@ -68,14 +68,15 @@ function getFileExtension(fullPath) {
 	return fullPath.split('.').pop()
 }
 async function fetchTextFile(url) {
-	var options = {
-		uri: url,
-		headers: headersGzip,
-		gzip: true
+	try {
+		return await rp({
+			uri: url,
+			headers: headersGzip,
+			gzip: true
+		})
+	} catch (error) {
+		log(error)
 	}
-	var content = await rp(options)
-	//this.log(content);
-	return content
 }
 async function downloadFile(pathImage, host) {
 	// prepare folders
@@ -147,7 +148,7 @@ async function getDHNumber(whiteLabelName) {
 }
 
 // save image to Images_WLs\Images_<WhiteLabelName
-async function syncImagesWL(whiteLabelName){
+async function syncImagesWL(whiteLabelName) {
 
 }
 module.exports = {
