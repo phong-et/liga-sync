@@ -160,13 +160,68 @@ async function syncImagesWLs(index, whiteLabelNames, next) {
 	else
 		next()
 }
+
+const fetchImage = async (url, fullFileName) => {
+	return new Promise((resolve) => {
+		let writeStream = fs.createWriteStream(fullFileName);
+		request(url)
+			.on('error', err => {
+				log('404 ==> fetchTextFile: %s', url)
+				log(err)
+			})
+			.pipe(writeStream)
+		writeStream.on('finish', resolve);
+	});
+}
+async function downloadFilesSync(imagePaths, host, syncFolder) {
+	log(imagePaths)
+	for (const imagePath of imagePaths) {
+		log(imagePath)
+		let url = cfg.protocol + host + '/' + imagePath,
+			rootFolderImages = cfg.rootFolderImages,
+			fileName = imagePath.split('/').slice(-1)[0],
+			fullFileName = rootFolderImages + imagePath,
+			dir = rootFolderImages + imagePath.substring(0, imagePath.indexOf(fileName) - 1)
+		if (syncFolder) {
+			dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
+			fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
+		}
+		if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
+		switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
+			case 'js':
+			case 'css':
+			case 'htm':
+			case 'html':
+			case 'download':
+				saveFile(fullFileName, await fetchTextFile(url))
+				break;
+			default:
+				////////////// none promise await/async ////////////////
+				await fetchImage(url, fullFileName)
+				///////////// error msg is red, cant overwrite it ////////////
+				// rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
+				break;
+		}
+	}
+	log("Downloaded %s files to %s folder", imagePaths.length, syncFolder);
+}
+async function syncImagesWLNew(whiteLabelName) {
+	whiteLabelName = whiteLabelName.toUpperCase()
+	log('Syncing %s', whiteLabelName)
+	let host = 'www.' + whiteLabelName + '.com',
+		syncFolder = 'Images_' + whiteLabelName,
+		paths = await getPaths(host, 'WebUI')
+	await downloadFilesSync(paths, host, syncFolder)
+}
 module.exports = {
 	getPaths: getPaths,
 	formatPath: formatPath,
 	downloadFile: downloadFile,
 	downloadFiles: downloadFiles,
+	downloadFilesSync: downloadFilesSync,
 	getSwitchCfg: getSwitchCfg,
 	getDHNumber: getDHNumber,
 	syncImagesWL: syncImagesWL,
-	syncImagesWLs: syncImagesWLs
+	syncImagesWLs: syncImagesWLs,
+	syncImagesWLNew: syncImagesWLNew
 };
