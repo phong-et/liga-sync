@@ -73,16 +73,15 @@ async function fetchTextFile(url) {
 			gzip: true
 		})
 	} catch (error) {
-		log(`Message=${error.message.substring(0, 3)} ==> fetchTextFile:${url}`)
+		log(`\nMessage=${error.message.substring(0, 3)} ==> fetchTextFile:${url}`)
 	}
 }
-
 async function fetchImage(url, fullFileName) {
 	return new Promise((resolve) => {
 		let writeStream = fs.createWriteStream(fullFileName);
 		request(url)
 			.on('error', err => {
-				log('404 ==> fetchTextFile: %s', url)
+				log('\n404 ==> fetchImage: %s', url)
 				log(err)
 			})
 			.pipe(writeStream)
@@ -186,7 +185,9 @@ async function syncImagesWLs(index, whiteLabelNames, next) {
 async function downloadFilesSync(imagePaths, host, syncFolder) {
 	const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 	let percent = 0, d1 = new Date().getTime()
-	bar1.start(imagePaths.length, 0);
+	log('\nSyncing %s', syncFolder)
+	bar1.start(imagePaths.length, 0)
+	//log('\n')
 	for (const imagePath of imagePaths) {
 		//log(imagePath)
 		percent = percent + 1
@@ -220,22 +221,66 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 	bar1.stop();
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1,
-		minutes = Math.floor(miliseconds / 1000) / 60,
-		seconds = (miliseconds / 1000) % 60
+		minutes = Math.round((miliseconds / 1000) / 60),
+		seconds = Math.round((miliseconds / 1000) % 60)
 	log("Downloaded %s files to %s folder in %s minutes %s seconds",
 		imagePaths.length, syncFolder, minutes, seconds
 	);
 }
 async function syncImagesWLNew(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
-	log('Syncing %s', whiteLabelName)
 	let domain = await getDomain(whiteLabelName)
-	host = 'www.' + domain ? domain : whiteLabelName + '.com',
+	host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
 		syncFolder = 'Images_' + whiteLabelName,
 		paths = await getPaths(host, 'WebUI')
 	await downloadFilesSync(paths, host, syncFolder)
 }
-
+/////////////////////////// FOR OLD SWITCH ////////////////
+async function saveImage(pathImage, host) {
+	let rootFolderImages = cfg.rootFolderImages;
+	var fileName = pathImage.split("/").slice(-1)[0];
+	var dir =
+		rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName));
+	//log('fileName:%s',fileName)
+	//log('dir:%s',dir)
+	if (!fs.existsSync(dir)) {
+		var shell = require("shelljs");
+		shell.mkdir("-p", dir);
+	}
+	var url = cfg.protocol + host + pathImage;
+	//log('url:%s',url)
+	//log('rootFolderImages:%s',rootFolderImages)
+	//log('pathImage:%s',pathImage)
+	switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
+		case "js":
+		case "css":
+		case "htm":
+		case "html":
+			this.saveFile(rootFolderImages + pathImage, await this.fetchTextFile(url))
+			break;
+		default:
+			request(url)
+				.on("error", function (err) {
+					log(err);
+				})
+				.pipe(fs.createWriteStream(rootFolderImages + pathImage));
+			break;
+	}
+}
+async function saveImages(i, paths, host, next) {
+	let path = paths[i];
+	log("paths[%s]=%s", i, path);
+	this.saveImage(path, host);
+	i = i + 1;
+	if (i < paths.length) {
+		setTimeout(function () {
+			saveImages(i, paths, host, next);
+		}, 10);
+	} else {
+		log("Downloaded %s files in Images folder", paths.length);
+		next()
+	}
+}
 module.exports = {
 	getPaths: getPaths,
 	formatPath: formatPath,
@@ -247,5 +292,6 @@ module.exports = {
 	syncImagesWL: syncImagesWL,
 	syncImagesWLs: syncImagesWLs,
 	syncImagesWLNew: syncImagesWLNew,
-	getDomain: getDomain
+	getDomain: getDomain,
+	fetchImage: fetchImage
 };
