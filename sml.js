@@ -15,7 +15,7 @@ let cfg = require('./switch.cfg'),
 		'Accept-Encoding': 'gzip, deflate'
 	},
 	page = "/pgajax.axd?T=SyncImages",
-	isLog = true,
+	isLog = false,
 	cliProgress = require('cli-progress');
 
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000;
@@ -185,7 +185,7 @@ async function syncImagesWLs(index, whiteLabelNames, next) {
 }
 async function downloadFilesSync(imagePaths, host, syncFolder) {
 	const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-	let percent = 0
+	let percent = 0, d1 = new Date().getTime()
 	bar1.start(imagePaths.length, 0);
 	for (const imagePath of imagePaths) {
 		//log(imagePath)
@@ -218,7 +218,13 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 		}
 	}
 	bar1.stop();
-	log("Downloaded %s files to %s folder", imagePaths.length, syncFolder);
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1,
+		minutes = Math.floor(miliseconds / 1000) / 60,
+		seconds = (miliseconds / 1000) % 60
+	log("Downloaded %s files to %s folder in %s minutes %s seconds",
+		imagePaths.length, syncFolder, minutes, seconds
+	);
 }
 async function syncImagesWLNew(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
