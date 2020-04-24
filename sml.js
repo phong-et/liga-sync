@@ -28,21 +28,26 @@ async function saveFile(fileName, content) {
 	})
 }
 async function getPaths(host, stringSplit) {
-	let protocol = cfg.protocol,
-		url = protocol + host + page,
-		options = {
-			uri: url,
-			headers: headers,
-			resolveWithFullResponse: true,
-			transform: function (body) {
-				return body.replace(/\\/g, "/");
+	try {
+		let protocol = cfg.protocol,
+			url = protocol + host + page,
+			options = {
+				uri: url,
+				headers: headers,
+				resolveWithFullResponse: true,
+				transform: function (body) {
+					return body.replace(/\\/g, "/");
+				}
 			}
-		}
-	if (isLog) log("Get Paths: %s", url);
-	var paths = await rp(options)
-	paths = JSON.parse(paths);
-	paths = formatPath(paths, stringSplit);
-	return paths;
+		if (isLog) log("Get Paths: %s", url);
+		var paths = await rp(options)
+		paths = JSON.parse(paths);
+		paths = formatPath(paths, stringSplit);
+		return paths;
+	} catch (error) {
+		log(error.message)
+		return []
+	}
 }
 /**
 * stringSplit(Images,C:\\...)
@@ -183,57 +188,76 @@ async function syncImagesWLs(index, whiteLabelNames, next) {
 		next()
 }
 async function downloadFilesSync(imagePaths, host, syncFolder) {
-	const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-	let percent = 0, d1 = new Date().getTime()
-	log('\nSyncing %s', syncFolder)
-	bar1.start(imagePaths.length, 0)
-	//log('\n')
-	for (const imagePath of imagePaths) {
-		//log(imagePath)
-		percent = percent + 1
-		bar1.update(percent);
-		let url = cfg.protocol + host + '/' + imagePath,
-			rootFolderImages = cfg.rootFolderImages,
-			fileName = imagePath.split('/').slice(-1)[0],
-			fullFileName = rootFolderImages + imagePath,
-			dir = rootFolderImages + imagePath.substring(0, imagePath.indexOf(fileName) - 1)
-		if (syncFolder) {
-			dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
-			fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
+	try {
+		const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+		let percent = 0, d1 = new Date().getTime()
+		log('\nSyncing %s', syncFolder)
+		bar1.start(imagePaths.length, 0)
+		//log('\n')
+		for (const imagePath of imagePaths) {
+			//log(imagePath)
+			percent = percent + 1
+			bar1.update(percent);
+			let url = cfg.protocol + host + '/' + imagePath,
+				rootFolderImages = cfg.rootFolderImages,
+				fileName = imagePath.split('/').slice(-1)[0],
+				fullFileName = rootFolderImages + imagePath,
+				dir = rootFolderImages + imagePath.substring(0, imagePath.indexOf(fileName) - 1)
+			if (syncFolder) {
+				dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
+				fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
+			}
+			if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
+			switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
+				case 'js':
+				case 'css':
+				case 'htm':
+				case 'html':
+				case 'download':
+					saveFile(fullFileName, await fetchTextFile(url))
+					break;
+				default:
+					////////////// none promise await/async ////////////////
+					await fetchImage(url, fullFileName)
+					///////////// error msg is red, cant overwrite it ////////////
+					// rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
+					break;
+			}
 		}
-		if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
-		switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
-			case 'js':
-			case 'css':
-			case 'htm':
-			case 'html':
-			case 'download':
-				saveFile(fullFileName, await fetchTextFile(url))
-				break;
-			default:
-				////////////// none promise await/async ////////////////
-				await fetchImage(url, fullFileName)
-				///////////// error msg is red, cant overwrite it ////////////
-				// rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
-				break;
-		}
+		bar1.stop();
+		let d2 = new Date().getTime(),
+			miliseconds = d2 - d1,
+			minutes = Math.round((miliseconds / 1000) / 60),
+			seconds = Math.round((miliseconds / 1000) % 60)
+		log("Downloaded %s files to %s folder in %s minutes %s seconds",
+			imagePaths.length, syncFolder, minutes, seconds
+		);
+	} catch (error) {
+		log(error.message)
 	}
-	bar1.stop();
-	let d2 = new Date().getTime(),
-		miliseconds = d2 - d1,
-		minutes = Math.round((miliseconds / 1000) / 60),
-		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Downloaded %s files to %s folder in %s minutes %s seconds",
-		imagePaths.length, syncFolder, minutes, seconds
-	);
+
 }
-async function syncImagesWLNew(whiteLabelName) {
-	whiteLabelName = whiteLabelName.toUpperCase()
-	let domain = await getDomain(whiteLabelName)
-	host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
-		syncFolder = 'Images_' + whiteLabelName,
-		paths = await getPaths(host, 'WebUI')
-	await downloadFilesSync(paths, host, syncFolder)
+async function syncImagesOneWL(whiteLabelName) {
+	try {
+		whiteLabelName = whiteLabelName.toUpperCase()
+		let domain = await getDomain(whiteLabelName)
+		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+			syncFolder = 'Images_' + whiteLabelName,
+			paths = await getPaths(host, 'WebUI')
+		await downloadFilesSync(paths, host, syncFolder)
+	} catch (error) {
+		log(error.message)
+	}
+
+}
+async function syncAll(whiteLabelNameList) {
+	try {
+		for (let name of whiteLabelNameList)
+			await syncImagesOneWL(name)
+	} catch (error) {
+		//log(error)
+	}
+
 }
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
@@ -291,7 +315,8 @@ module.exports = {
 	getDHNumber: getDHNumber,
 	syncImagesWL: syncImagesWL,
 	syncImagesWLs: syncImagesWLs,
-	syncImagesWLNew: syncImagesWLNew,
+	syncImagesOneWL: syncImagesOneWL,
+	syncAll: syncAll,
 	getDomain: getDomain,
 	fetchImage: fetchImage
 };
