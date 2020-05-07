@@ -4,14 +4,15 @@ let cfg = require('./switch.cfg'),
 	rp = require('request-promise'),
 	request = require('request'),
 	fs = require('fs'),
+	userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36',
+	contentType = 'text/html',
 	headers = {
-		"User-Agent":
-			"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.98 Safari/537.36",
-		"Content-type": "text/html"
+		'User-Agent': userAgent,
+		'Content-type': contentType
 	},
 	headersGzip = {
-		'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.98 Safari/537.36',
-		'Content-type': 'text/html',
+		'User-Agent': userAgent,
+		'Content-type': contentType,
 		'Accept-Encoding': 'gzip, deflate'
 	},
 	page = "/pgajax.axd?T=SyncImages",
@@ -127,7 +128,7 @@ async function fetchImage(url, fullFileName) {
 					resolve(false)
 				})
 				//.on('finish', resolve)
-				.on('close', resolve)
+				.on('close', (_) => resolve(true))
 				//.on('pipe', resolve)
 				.on('unpipe', (_) => {
 					log('Something has stopped piping into the writer.')
@@ -276,8 +277,7 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 						break;
 					default:
 						////////////// none promise await/async ////////////////
-						let t = await fetchImage(url, fullFileName)
-						//if (!t) log('->' + t)
+						await fetchImage(url, fullFileName)
 					//await downloadImage(url, fullFileName)
 					///////////// error msg is red, cant overwrite it ////////////
 					// rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
@@ -300,7 +300,60 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 		//log(error.message)
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
-
+}
+async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
+	try {
+		const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+		let percent = 0, d1 = new Date().getTime()
+		log('\nSyncing %s from %s', syncFolder, host)
+		bar1.start(imagePaths.length, 0)
+		//log('\n')
+		while (imagePaths.length > 0) {
+			imagePath = imagePaths[0]
+			log('\r\n%s\r\n', imagePath)
+			percent = percent + 1
+			bar1.update(percent);
+			let url = cfg.protocol + host + '/' + imagePath,
+				rootFolderImages = cfg.rootFolderImages,
+				fileName = imagePath.split('/').slice(-1)[0],
+				fullFileName = rootFolderImages + imagePath,
+				dir = rootFolderImages + imagePath.substring(0, imagePath.indexOf(fileName) - 1)
+			if (syncFolder) {
+				dir = dir.replace('Images', 'Images_WLs/' + syncFolder)
+				fullFileName = fullFileName.replace('Images/', 'Images_WLs\\' + syncFolder + '\\')
+			}
+			if (!fs.existsSync(dir)) shell.mkdir('-p', dir)
+			let extensition = fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)
+			try {
+				switch (extensition) {
+					case 'js':
+					case 'css':
+					case 'htm':
+					case 'html':
+					case 'download':
+						let saved = await saveFile(fullFileName, await fetchTextFile(url))
+						if (saved) imagePaths.splice(0, 1)
+						break;
+					default:
+						let fetched = await fetchImage(url, fullFileName)
+						if (fetched) imagePaths.splice(0, 1)
+				}
+			}
+			catch (error) {
+				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncLoop.for -> ${url} => ${error}`)
+			}
+		}
+		bar1.stop();
+		let d2 = new Date().getTime(),
+			miliseconds = d2 - d1,
+			minutes = Math.round((miliseconds / 1000) / 60),
+			seconds = Math.round((miliseconds / 1000) % 60)
+		log("Downloaded %s files to %s folder in %s minutes %s seconds",
+			imagePaths.length, syncFolder, minutes, seconds
+		)
+	} catch (error) {
+		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
+	}
 }
 async function syncImagesOneWL(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
@@ -308,11 +361,21 @@ async function syncImagesOneWL(whiteLabelName) {
 	host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
 		syncFolder = 'Images_' + whiteLabelName,
 		paths = await getPaths(host, 'WebUI')
-	await downloadFilesSync(paths, host, syncFolder)
+	await downloadFilesSyncLoop(paths, host, syncFolder)
 }
 async function syncImagesAllWLs(whiteLabelNameList) {
 	for (let name of whiteLabelNameList)
 		await syncImagesOneWL(name)
+}
+async function fetchLocalWLImages(whiteLabelName){
+
+}
+async function fetchLiveWLImages(whiteLabelName){
+
+}
+
+function findNewImageFiles(localImageList, liveImageList){
+	
 }
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
