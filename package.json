@@ -11,6 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "cli-progress": "^3.8.0",
+    "image-downloader": "^3.5.0",
+    "napajs": "^0.2.3",
     "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "shelljs": "^0.8.2"
