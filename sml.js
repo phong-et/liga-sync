@@ -17,8 +17,7 @@ let cfg = require('./switch.cfg'),
 	},
 	page = "/pgajax.axd?T=SyncImages",
 	isLog = false,
-	cliProgress = require('cli-progress'),
-	download = require('image-downloader')
+	cliProgress = require('cli-progress')
 
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000;
 async function saveFile(fileName, content) {
