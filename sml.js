@@ -15,8 +15,10 @@ let cfg = require('./switch.cfg'),
 		'Content-type': contentType,
 		'Accept-Encoding': 'gzip, deflate'
 	},
-	page = "/pgajax.axd?T=SyncImages",
-	isLog = false,
+	syncPage = "/pgajax.axd?T=SyncImages",
+	localPage = "pgajax.axd?T=GetWLImages&name=",
+	livePage = "/pgajax.axd?T=GetImages"
+isLog = false,
 	cliProgress = require('cli-progress')
 
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000;
@@ -36,25 +38,22 @@ async function writeLog(content) {
 		})
 	})
 }
-async function getPaths(host, stringSplit) {
+async function getPaths(url) {
 	try {
-		let protocol = cfg.protocol,
-			url = protocol + host + page,
-			options = {
-				uri: url,
-				headers: headers,
-				resolveWithFullResponse: true,
-				transform: function (body) {
-					return body.replace(/\\/g, "/");
-				}
+		let options = {
+			uri: url,
+			headers: headers,
+			resolveWithFullResponse: true,
+			transform: function (body) {
+				return body.replace(/\\/g, "/");
 			}
+		}
 		if (isLog) log("Get Paths: %s", url);
 		var paths = await rp(options)
-		paths = JSON.parse(paths);
-		paths = formatPath(paths, stringSplit);
+		paths = JSON.parse(paths)
 		return paths;
 	} catch (error) {
-		log(error.message)
+		log(error)
 		return []
 	}
 }
@@ -231,7 +230,10 @@ async function syncImagesWL(whiteLabelName) {
 	log('Syncing %s', whiteLabelName)
 	let host = 'www.' + whiteLabelName + '.com',
 		syncFolder = 'Images_' + whiteLabelName,
-		paths = await getPaths(host, 'WebUI')
+		protocol = cfg.protocol,
+		url = protocol + host + syncPage,
+		paths = await getPaths(url)
+	paths = formatPath(paths, 'WebUI')
 	downloadFiles(0, paths, host, () => log('Synced Images of %s', whiteLabelName), syncFolder)
 }
 async function syncImagesWLs(index, whiteLabelNames, next) {
@@ -242,6 +244,11 @@ async function syncImagesWLs(index, whiteLabelNames, next) {
 		await syncImagesWLs(index, whiteLabelNames, next)
 	else
 		next()
+}
+async function delay(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms)
+	})
 }
 async function downloadFilesSync(imagePaths, host, syncFolder) {
 	try {
@@ -309,7 +316,7 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 		//log('\n')
 		while (imagePaths.length > 0) {
 			imagePath = imagePaths[0]
-			log('\r\n%s\r\n', imagePath)
+			//log('\r\n%s\r\n', imagePath)
 			percent = percent + 1
 			bar1.update(percent);
 			let url = cfg.protocol + host + '/' + imagePath,
@@ -337,6 +344,7 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 						let fetched = await fetchImage(url, fullFileName)
 						if (fetched) imagePaths.splice(0, 1)
 				}
+				await delay(TIME_DELAY_EACH_DOWNLOADING_FILE)
 			}
 			catch (error) {
 				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncLoop.for -> ${url} => ${error}`)
@@ -359,23 +367,35 @@ async function syncImagesOneWL(whiteLabelName) {
 	let domain = await getDomain(whiteLabelName)
 	host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
 		syncFolder = 'Images_' + whiteLabelName,
-		paths = await getPaths(host, 'WebUI')
+		protocol = cfg.protocol,
+		url = protocol + host + syncPage,
+		paths = await getPaths(url)
+	paths = formatPath(paths, 'WebUI')
 	await downloadFilesSyncLoop(paths, host, syncFolder)
 }
 async function syncImagesAllWLs(whiteLabelNameList) {
 	for (let name of whiteLabelNameList)
 		await syncImagesOneWL(name)
 }
-async function fetchLocalWLImages(whiteLabelName){
+async function fetchAllImagePathsFromLocal(whiteLabelName) {
+	let url = cfg.urlProject + localPage + whiteLabelName,
+		paths = await getPaths(url)
+	return paths
+}
+async function fetchAllImagePathsFromLive(whiteLabelName) {
+	whiteLabelName = whiteLabelName.toUpperCase()
+	let domain = await getDomain(whiteLabelName),
+		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+		protocol = cfg.protocol,
+		url = protocol + host + livePage,
+		paths = await getPaths(url)
+	return paths
+}
+
+function findNewImageFiles(localImageList, liveImageList) {
 
 }
-async function fetchLiveWLImages(whiteLabelName){
 
-}
-
-function findNewImageFiles(localImageList, liveImageList){
-	
-}
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
 	let rootFolderImages = cfg.rootFolderImages;
@@ -435,5 +455,7 @@ module.exports = {
 	syncImagesOneWL: syncImagesOneWL,
 	syncImagesAllWLs: syncImagesAllWLs,
 	getDomain: getDomain,
-	fetchImage: fetchImage
+	fetchImage: fetchImage,
+	fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
+	fetchAllImagePathsFromLive: fetchAllImagePathsFromLive
 };
