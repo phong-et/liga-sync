@@ -73,7 +73,7 @@ function formatPath(paths, stringSplit) {
 }
 //0.02 mls
 function getFileName(fullPath) {
-	return fullPath.split('\\').pop().split('/').pop();
+	return fullPath.split('/').pop().split('/').pop();
 }
 function getFileExtension(fullPath) {
 	return fullPath.split('.').pop()
@@ -391,9 +391,35 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 		paths = await getPaths(url)
 	return paths
 }
+function isLocalFileExist(liveFileName, fileList) {
+	for (let i = 0; i < fileList.length; i++) {
+		let localFileName = getFileName(fileList[i].fileName)
+		log('%s -> %s', liveFileName, localFileName)
+		if(liveFileName === localFileName)
+			return true
+	}
+	return false
+}
+function compareLocalAndLiveFile(localFileNameDate, liveFileNameDate){
+
+}
 
 function findNewImageFiles(localImageList, liveImageList) {
-
+	let result = {
+		newFiles: [],
+		updatedFiled: []
+	}
+	for (let i = 0; i < liveImageList.length; i++) {
+		let liveFileName = getFileName(liveImageList[i].fileName)
+		if (isLocalFileExist(liveFileName, localImageList)){
+			localFileNameDate = localImageList[i].fileDateModified,
+			liveFileNameDate = liveImageList[i].fileDateModified
+			result.updatedFiled.push(liveFileName)
+		}
+		else result.newFiles.push(liveFileName)
+		//log(`${fileName} -> [Local]:${localFileNameDate} & [Live]: ${liveFileNameDate}`)
+	}
+	log(result)
 }
 
 /////////////////////////// FOR OLD SWITCH ////////////////
@@ -457,5 +483,6 @@ module.exports = {
 	getDomain: getDomain,
 	fetchImage: fetchImage,
 	fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
-	fetchAllImagePathsFromLive: fetchAllImagePathsFromLive
+	fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
+	findNewImageFiles: findNewImageFiles
 };

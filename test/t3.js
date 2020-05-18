@@ -1,6 +1,7 @@
 // test 
 (async function () {
     let sync = require('../sml'), log = console.log
-    //sync.fetchAllImagePathsFromLocal('RAJAELANG')
-    sync.fetchAllImagePathsFromLive('RAJAELANG')
+    let localImageList = await sync.fetchAllImagePathsFromLocal('havana')
+    let liveImageList = await sync.fetchAllImagePathsFromLive('havana')
+    sync.findNewImageFiles(localImageList, liveImageList)
 })()
