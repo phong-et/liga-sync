@@ -355,8 +355,7 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 			miliseconds = d2 - d1,
 			minutes = Math.round((miliseconds / 1000) / 60),
 			seconds = Math.round((miliseconds / 1000) % 60)
-		log("Downloaded %s files to %s folder in %s minutes %s seconds",
-			imagePaths.length, syncFolder, minutes, seconds
+		log("Downloaded all files to %s folder in %s minutes %s seconds", syncFolder, minutes, seconds
 		)
 	} catch (error) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
