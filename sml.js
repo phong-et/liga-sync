@@ -71,6 +71,22 @@ function formatPath(paths, stringSplit) {
 	}
 	return newPaths
 }
+function filterFileList(fileList, stringSplit, whiteLabelName) {
+	let newFileList = []
+	for (let file of fileList) {
+		let fileName = file.fileName,
+			fileDateModified = file.fileDateModified,
+			extension = getFileExtension(fileName)
+		if (extension !== 'db' && extension !== 'onetoc2' && extension !== fileName) {
+			fileName = fileName.substring(fileName.indexOf(stringSplit) + stringSplit.length + 1, fileName.length);
+			let re = new RegExp('Images_' + whiteLabelName, 'i')
+			if (whiteLabelName) fileName = fileName.replace(re, 'Images')
+			newFileList.push({ fileName, fileDateModified })
+		}
+	}
+	//log(newFileList[0])
+	return newFileList
+}
 //0.02 mls
 function getFileName(fullPath) {
 	return fullPath.split('/').pop().split('/').pop();
@@ -379,6 +395,7 @@ async function syncImagesAllWLs(whiteLabelNameList) {
 async function fetchAllImagePathsFromLocal(whiteLabelName) {
 	let url = cfg.urlProject + localPage + whiteLabelName,
 		paths = await getPaths(url)
+	paths = filterFileList(paths, 'SportDBClient.WebUI/Images_WLs', whiteLabelName)
 	return paths
 }
 async function fetchAllImagePathsFromLive(whiteLabelName) {
@@ -388,28 +405,26 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 		protocol = cfg.protocol,
 		url = protocol + host + livePage,
 		paths = await getPaths(url)
+	paths = filterFileList(paths, 'WebUI')
 	return paths
 }
 function getLocalFileExist(liveFileName, localFileList) {
 	for (let i = 0; i < localFileList.length; i++)
-		if (liveFileName === getFileName(localFileList[i].fileName))
+		if (liveFileName === localFileList[i].fileName)
 			return localFileList[i]
 	return null
 }
-function compareLocalAndLiveFile(localFileNameDate, liveFileNameDate) {
 
-}
-
-function findNewImageFiles(localImageList, liveImageList) {
+function findUpdatedImageFiles(localImageList, liveImageList) {
 	let result = {
 		newFiles: [],
 		updatedFiled: []
 	}, d1 = new Date().getTime()
 	for (let i = 0; i < liveImageList.length; i++) {
-		let liveFileName = getFileName(liveImageList[i].fileName)
+		let liveFileName = liveImageList[i].fileName
 		let localFile = getLocalFileExist(liveFileName, localImageList)
 		if (localFile) {
-			//log(liveFileName)
+			//log(localFile)
 			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
 				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
 			if (liveFileNameDate > localFileNameDate)
@@ -423,7 +438,13 @@ function findNewImageFiles(localImageList, liveImageList) {
 		minutes = Math.round((miliseconds / 1000) / 60),
 		seconds = Math.round((miliseconds / 1000) % 60)
 	log("Compare all files: %s minutes %s seconds", minutes, seconds)
-	log(result)
+	return result
+}
+
+async function findUpdatedImageFileWL(whiteLabelName) {
+	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
+		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
+	return findUpdatedImageFiles(localImageList, liveImageList)
 }
 
 /////////////////////////// FOR OLD SWITCH ////////////////
@@ -486,7 +507,7 @@ module.exports = {
 	syncImagesAllWLs: syncImagesAllWLs,
 	getDomain: getDomain,
 	fetchImage: fetchImage,
-	fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
-	fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
-	findNewImageFiles: findNewImageFiles
+	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
+	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
+	findUpdatedImageFileWL: findUpdatedImageFileWL
 };
