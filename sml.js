@@ -390,16 +390,13 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 		paths = await getPaths(url)
 	return paths
 }
-function isLocalFileExist(liveFileName, fileList) {
-	for (let i = 0; i < fileList.length; i++) {
-		let localFileName = getFileName(fileList[i].fileName)
-		log('%s -> %s', liveFileName, localFileName)
-		if(liveFileName === localFileName)
-			return true
-	}
-	return false
+function getLocalFileExist(liveFileName, localFileList) {
+	for (let i = 0; i < localFileList.length; i++)
+		if (liveFileName === getFileName(localFileList[i].fileName))
+			return localFileList[i]
+	return null
 }
-function compareLocalAndLiveFile(localFileNameDate, liveFileNameDate){
+function compareLocalAndLiveFile(localFileNameDate, liveFileNameDate) {
 
 }
 
@@ -407,17 +404,25 @@ function findNewImageFiles(localImageList, liveImageList) {
 	let result = {
 		newFiles: [],
 		updatedFiled: []
-	}
+	}, d1 = new Date().getTime()
 	for (let i = 0; i < liveImageList.length; i++) {
 		let liveFileName = getFileName(liveImageList[i].fileName)
-		if (isLocalFileExist(liveFileName, localImageList)){
-			localFileNameDate = localImageList[i].fileDateModified,
-			liveFileNameDate = liveImageList[i].fileDateModified
-			result.updatedFiled.push(liveFileName)
+		let localFile = getLocalFileExist(liveFileName, localImageList)
+		if (localFile) {
+			//log(liveFileName)
+			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
+				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
+			if (liveFileNameDate > localFileNameDate)
+				result.updatedFiled.push(liveFileName)
 		}
 		else result.newFiles.push(liveFileName)
 		//log(`${fileName} -> [Local]:${localFileNameDate} & [Live]: ${liveFileNameDate}`)
 	}
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1,
+		minutes = Math.round((miliseconds / 1000) / 60),
+		seconds = Math.round((miliseconds / 1000) % 60)
+	log("Compare all files: %s minutes %s seconds", minutes, seconds)
 	log(result)
 }
 
