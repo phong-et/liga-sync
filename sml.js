@@ -408,31 +408,49 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 	paths = filterFileList(paths, 'WebUI')
 	return paths
 }
-function getLocalFileExist(liveFileName, localFileList) {
-	for (let i = 0; i < localFileList.length; i++)
-		if (liveFileName === localFileList[i].fileName)
-			return localFileList[i]
+function getFileInList(fileName, fileList) {
+	for (let i = 0; i < fileList.length; i++)
+		if (fileName === fileList[i].fileName)
+			return fileList[i]
 	return null
+}
+function findDeletedImagesFiles(localImageList, liveImageList) {
+	let result = {
+		deletedFiles: []
+	}, d1 = new Date().getTime()
+	for (let i = 0; i < localImageList.length; i++) {
+		let localFileName = localImageList[i].fileName
+		let liveFile = getFileInList(localFileName, liveImageList)
+		if (!liveFile) result.deletedFiles.push(localFileName)
+	}
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1,
+		minutes = Math.round((miliseconds / 1000) / 60),
+		seconds = Math.round((miliseconds / 1000) % 60)
+	log("Compare all files: %s minutes %s seconds", minutes, seconds)
+	return result
 }
 
 function findUpdatedImageFiles(localImageList, liveImageList) {
 	let result = {
 		newFiles: [],
-		updatedFiled: []
+		updatedFiles: [],
+		deletedFiles: []
 	}, d1 = new Date().getTime()
 	for (let i = 0; i < liveImageList.length; i++) {
 		let liveFileName = liveImageList[i].fileName
-		let localFile = getLocalFileExist(liveFileName, localImageList)
+		let localFile = getFileInList(liveFileName, localImageList)
 		if (localFile) {
 			//log(localFile)
 			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
 				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
 			if (liveFileNameDate > localFileNameDate)
-				result.updatedFiled.push(liveFileName)
+				result.updatedFiles.push(liveFileName)
 		}
 		else result.newFiles.push(liveFileName)
 		//log(`${fileName} -> [Local]:${localFileNameDate} & [Live]: ${liveFileNameDate}`)
 	}
+	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1,
 		minutes = Math.round((miliseconds / 1000) / 60),
