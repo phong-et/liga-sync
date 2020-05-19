@@ -78,9 +78,11 @@ function filterFileList(fileList, stringSplit, whiteLabelName) {
 			fileDateModified = file.fileDateModified,
 			extension = getFileExtension(fileName)
 		if (extension !== 'db' && extension !== 'onetoc2' && extension !== fileName) {
-			fileName = fileName.substring(fileName.indexOf(stringSplit) + stringSplit.length + 1, fileName.length);
-			let re = new RegExp('Images_' + whiteLabelName, 'i')
-			if (whiteLabelName) fileName = fileName.replace(re, 'Images')
+			fileName = fileName.substring(fileName.indexOf(stringSplit) + stringSplit.length + 1, fileName.length)
+			if (whiteLabelName) {
+				let re = new RegExp('Images_' + whiteLabelName, 'i')
+				fileName = fileName.replace(re, 'Images')
+			}
 			newFileList.push({ fileName, fileDateModified })
 		}
 	}
@@ -377,20 +379,30 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
-async function syncImagesOneWL(whiteLabelName) {
+async function syncImagesOneWL({ whiteLabelName, isSyncWholeFolder }) {
 	whiteLabelName = whiteLabelName.toUpperCase()
-	let domain = await getDomain(whiteLabelName)
-	host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
-		syncFolder = 'Images_' + whiteLabelName,
+	let paths = [],
+		domain = await getDomain(whiteLabelName),
 		protocol = cfg.protocol,
-		url = protocol + host + syncPage,
+		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+		syncFolder = 'Images_' + whiteLabelName
+	if (isSyncWholeFolder) {
+		let url = protocol + host + syncPage
 		paths = await getPaths(url)
-	paths = formatPath(paths, 'WebUI')
-	await downloadFilesSyncLoop(paths, host, syncFolder)
+		paths = formatPath(paths, 'WebUI')
+	}
+	else {
+		let fileList = await findUpdatedImageFileWL(whiteLabelName)
+		log(fileList)
+		paths = [...fileList.newFiles, ...fileList.updatedFiles]
+		//log(paths)
+	}
+	if (paths.length > 0) await downloadFilesSyncLoop(paths, host, syncFolder)
+	else log('All files are latest')
 }
 async function syncImagesAllWLs(whiteLabelNameList) {
 	for (let name of whiteLabelNameList)
-		await syncImagesOneWL(name)
+		await syncImagesOneWL({ whiteLabelName: name })
 }
 async function fetchAllImagePathsFromLocal(whiteLabelName) {
 	let url = cfg.urlProject + localPage + whiteLabelName,
@@ -410,7 +422,7 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 }
 function getFileInList(fileName, fileList) {
 	for (let i = 0; i < fileList.length; i++)
-		if (fileName === fileList[i].fileName)
+		if (fileName.toUpperCase() === fileList[i].fileName.toUpperCase())
 			return fileList[i]
 	return null
 }
@@ -427,7 +439,7 @@ function findDeletedImagesFiles(localImageList, liveImageList) {
 		miliseconds = d2 - d1,
 		minutes = Math.round((miliseconds / 1000) / 60),
 		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Compare all files: %s minutes %s seconds", minutes, seconds)
+	log("Done -> findDeletedImagesFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
 	return result
 }
 
@@ -444,22 +456,23 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 			//log(localFile)
 			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
 				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
-			if (liveFileNameDate > localFileNameDate)
+			if (liveFileNameDate > localFileNameDate + 3600000) // Malay = VN + 1h
 				result.updatedFiles.push(liveFileName)
 		}
 		else result.newFiles.push(liveFileName)
-		//log(`${fileName} -> [Local]:${localFileNameDate} & [Live]: ${liveFileNameDate}`)
 	}
 	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1,
 		minutes = Math.round((miliseconds / 1000) / 60),
 		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Compare all files: %s minutes %s seconds", minutes, seconds)
+		log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
 	return result
 }
 
 async function findUpdatedImageFileWL(whiteLabelName) {
+	log('___________________________')
+	log('Checking %s Images files...', whiteLabelName)
 	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
 		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
 	return findUpdatedImageFiles(localImageList, liveImageList)
