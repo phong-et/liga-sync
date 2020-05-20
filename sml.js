@@ -17,14 +17,23 @@ let cfg = require('./switch.cfg'),
 	},
 	syncPage = "/pgajax.axd?T=SyncImages",
 	localPage = "pgajax.axd?T=GetWLImages&name=",
-	livePage = "/pgajax.axd?T=GetImages"
-isLog = false,
+	livePage = "/pgajax.axd?T=GetImages",
+	isLog = false,
 	cliProgress = require('cli-progress')
 
-const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000;
+const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
+
 async function saveFile(fileName, content) {
 	return new Promise((resolve, reject) => {
 		fs.writeFile(fileName, content, function (err) {
+			if (err) reject(err)
+			resolve(true)
+		})
+	})
+}
+async function deleteFile(fileName) {
+	return new Promise((resolve, reject) => {
+		fs.unlink(fileName, function (err) {
 			if (err) reject(err)
 			resolve(true)
 		})
@@ -39,6 +48,7 @@ async function writeLog(content) {
 	})
 }
 async function getPaths(url) {
+	//log(url)
 	try {
 		let options = {
 			uri: url,
@@ -54,6 +64,8 @@ async function getPaths(url) {
 		return paths;
 	} catch (error) {
 		log(error)
+		if (error.message.indexOf('getaddrinfo'))
+			log('======> DOMAIN %s don\'t exist', error.cause.hostname)
 		return []
 	}
 }
@@ -393,12 +405,18 @@ async function syncImagesOneWL({ whiteLabelName, isSyncWholeFolder }) {
 	}
 	else {
 		let fileList = await findUpdatedImageFileWL(whiteLabelName)
-		log(fileList)
-		paths = [...fileList.newFiles, ...fileList.updatedFiles]
-		//log(paths)
+		if (fileList.length === 0)
+			log('Has error pls check msg')
+		else {
+			log(fileList)
+			paths = [...fileList.newFiles, ...fileList.updatedFiles]
+			if (fileList.deletedFiles && fileList.deletedFiles.length > 0)
+				deleteFiles(fileList.deletedFiles, whiteLabelName)
+			if (paths.length > 0)
+				await downloadFilesSyncLoop(paths, host, syncFolder)
+			else log('All files are latest')
+		}
 	}
-	if (paths.length > 0) await downloadFilesSyncLoop(paths, host, syncFolder)
-	else log('All files are latest')
 }
 async function syncImagesAllWLs(whiteLabelNameList) {
 	for (let name of whiteLabelNameList)
@@ -466,7 +484,7 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 		miliseconds = d2 - d1,
 		minutes = Math.round((miliseconds / 1000) / 60),
 		seconds = Math.round((miliseconds / 1000) % 60)
-		log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
+	log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
 	return result
 }
 
@@ -475,7 +493,17 @@ async function findUpdatedImageFileWL(whiteLabelName) {
 	log('Checking %s Images files...', whiteLabelName)
 	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
 		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
-	return findUpdatedImageFiles(localImageList, liveImageList)
+	if (liveImageList.length > 0)
+		return findUpdatedImageFiles(localImageList, liveImageList)
+	return []
+}
+
+async function deleteFiles(fileList, whiteLabelName) {
+	let re = new RegExp('Images/', 'i')
+	fileList = fileList.map(fileName => fileName.replace(re, cfg.rootPath + 'Images_WLs/Images_' + whiteLabelName + '/').replace(/\//g, '\\'))
+	//log(fileList)
+	for (let fileName of fileList)
+		await deleteFile(fileName)
 }
 
 /////////////////////////// FOR OLD SWITCH ////////////////
