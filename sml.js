@@ -39,6 +39,13 @@ async function deleteFile(fileName) {
 		})
 	})
 }
+async function deleteFiles(fileList, whiteLabelName) {
+	let re = new RegExp('Images/', 'i')
+	fileList = fileList.map(fileName => fileName.replace(re, cfg.rootPath + 'Images_WLs/Images_' + whiteLabelName + '/').replace(/\//g, '\\'))
+	//log(fileList)
+	for (let fileName of fileList)
+		await deleteFile(fileName)
+}
 async function writeLog(content) {
 	return new Promise((resolve, reject) => {
 		fs.appendFile('./Log.txt', content + '\r\n', function (err) {
@@ -48,7 +55,7 @@ async function writeLog(content) {
 	})
 }
 async function getPaths(url) {
-	//log(url)
+	log(url)
 	try {
 		let options = {
 			uri: url,
@@ -101,12 +108,39 @@ function filterFileList(fileList, stringSplit, whiteLabelName) {
 	//log(newFileList[0])
 	return newFileList
 }
-//0.02 mls
-function getFileName(fullPath) {
-	return fullPath.split('/').pop().split('/').pop();
-}
 function getFileExtension(fullPath) {
 	return fullPath.split('.').pop()
+}
+async function delay(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms)
+	})
+}
+async function getSwitchCfg() {
+	try {
+		return JSON.parse(await rp({
+			uri: cfg.urlProject + 'pgajax.axd?T=GetSwitchCfg',
+			headers: headers
+		}))
+	} catch (error) {
+		log(error)
+	}
+}
+async function getDHNumber(whiteLabelName) {
+	try {
+		let result = await getSwitchCfg()
+		return result['Clients'][whiteLabelName.toUpperCase()]
+	} catch (error) {
+		log(error)
+	}
+}
+async function getDomain(whiteLabelName) {
+	try {
+		let result = await getSwitchCfg()
+		return result['Clients'][whiteLabelName.toUpperCase()]['defaultDomain']
+	} catch (error) {
+		log(error)
+	}
 }
 async function fetchTextFile(url) {
 	try {
@@ -118,27 +152,6 @@ async function fetchTextFile(url) {
 	} catch (error) {
 		log(`\nMessage=${error.message.substring(0, 3)} ==> fetchTextFile:${url}`)
 	}
-}
-async function downloadImage(url, fullFileName) {
-	return new Promise((resolve) => {
-		rp.head(url, (error, _, _) => {
-			if (error) writeLog(`${new Date().toLocaleString('vi-VN')}: downloadImage.request.head -> ${url} -> ${error}`)
-			else {
-				try {
-					rp(url, (error, _, _) => {
-						if (error) writeLog(`${new Date().toLocaleString('vi-VN')}: downloadImage.request.head.request: -> ${url} -> ${error}`)
-					}).pipe(
-						fs.createWriteStream(fullFileName)
-							.on("error", (error) => writeLog(`${new Date().toLocaleString('vi-VN')}: downloadImage.request.head.request.fs.createWriteStream: -> ${url} -> ${error}`))
-							.on('close', writeStream.on('finish', resolve))
-					).on("error", (error) => writeLog(`${new Date().toLocaleString('vi-VN')}: downloadImage.request.head.request.pipe: -> ${url} -> ${error}`))
-
-				} catch (error) {
-					writeLog(`${new Date().toLocaleString('vi-VN')}: downloadImage %s error fs.createWriteStream: -> ${url} -> ${error}`)
-				}
-			}
-		})
-	})
 }
 async function fetchImage(url, fullFileName) {
 	return new Promise((resolve) => {
@@ -178,8 +191,9 @@ async function fetchImage(url, fullFileName) {
 	// }
 
 }
-
-async function downloadFile(pathImage, host, syncFolder) {
+/////////////////////// SYNC FILE USE RESCURISVE & NONE ASYNC/AWAIT ///////////////////////
+// => will open many connection and download many files at same time
+async function downloadOneFile(pathImage, host, syncFolder) {
 	//log('pathImage:%s', pathImage)
 	let url = cfg.protocol + host + '/' + pathImage,
 		rootFolderImages = cfg.rootFolderImages,
@@ -219,7 +233,7 @@ async function downloadFile(pathImage, host, syncFolder) {
 async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 	let currentPath = paths[indexPath];
 	if (isLog) log("paths[%s]=%s", indexPath, currentPath);
-	await downloadFile(currentPath, host, syncFolder);
+	await downloadOneFile(currentPath, host, syncFolder);
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
 		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE);
@@ -228,34 +242,7 @@ async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 		next()
 	}
 }
-async function getSwitchCfg() {
-	try {
-		return JSON.parse(await rp({
-			uri: cfg.urlProject + 'pgajax.axd?T=GetSwitchCfg',
-			headers: headers
-		}))
-	} catch (error) {
-		log(error)
-	}
-}
-async function getDHNumber(whiteLabelName) {
-	try {
-		let result = await getSwitchCfg()
-		return result['Clients'][whiteLabelName.toUpperCase()]
-	} catch (error) {
-		log(error)
-	}
-}
-async function getDomain(whiteLabelName) {
-	try {
-		let result = await getSwitchCfg()
-		return result['Clients'][whiteLabelName.toUpperCase()]['defaultDomain']
-	} catch (error) {
-		log(error)
-	}
-}
-// save image to Images_WLs\Images_<WhiteLabelName>
-async function syncImagesWL(whiteLabelName) {
+async function syncImagesOneWLQuickly(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	log('Syncing %s', whiteLabelName)
 	let host = 'www.' + whiteLabelName + '.com',
@@ -266,21 +253,97 @@ async function syncImagesWL(whiteLabelName) {
 	paths = formatPath(paths, 'WebUI')
 	downloadFiles(0, paths, host, () => log('Synced Images of %s', whiteLabelName), syncFolder)
 }
-async function syncImagesWLs(index, whiteLabelNames, next) {
+async function syncImagesWLsQuickly(index, whiteLabelNames, next) {
 	let currentWhiteLabelName = whiteLabelNames[index]
-	await syncImagesWL(currentWhiteLabelName)
+	await syncImagesOneWLQuickly(currentWhiteLabelName)
 	index = index + 1
 	if (index < whiteLabelNames.length)
 		await syncImagesWLs(index, whiteLabelNames, next)
 	else
 		next()
 }
-async function delay(ms) {
-	return new Promise(resolve => {
-		setTimeout(resolve, ms)
-	})
+
+function getFileInList(fileName, fileList) {
+	for (let i = 0; i < fileList.length; i++)
+		if (fileName.toUpperCase() === fileList[i].fileName.toUpperCase())
+			return fileList[i]
+	return null
 }
-async function downloadFilesSync(imagePaths, host, syncFolder) {
+function findDeletedImagesFiles(localImageList, liveImageList) {
+	let result = {
+		deletedFiles: []
+	}, d1 = new Date().getTime()
+	for (let i = 0; i < localImageList.length; i++) {
+		let localFileName = localImageList[i].fileName
+		let liveFile = getFileInList(localFileName, liveImageList)
+		if (!liveFile) result.deletedFiles.push(localFileName)
+	}
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1,
+		minutes = Math.round((miliseconds / 1000) / 60),
+		seconds = Math.round((miliseconds / 1000) % 60)
+	log("Done -> findDeletedImagesFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
+	return result
+}
+function findUpdatedImageFiles(localImageList, liveImageList) {
+	let result = {
+		newFiles: [],
+		updatedFiles: [],
+		deletedFiles: []
+	}, d1 = new Date().getTime()
+	for (let i = 0; i < liveImageList.length; i++) {
+		let liveFileName = liveImageList[i].fileName
+		let localFile = getFileInList(liveFileName, localImageList)
+		if (localFile) {
+			//log(localFile)
+			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
+				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
+			if (liveFileNameDate > localFileNameDate + 3600000) // Malay = VN + 1h
+				result.updatedFiles.push(liveFileName)
+		}
+		else result.newFiles.push(liveFileName)
+	}
+	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1,
+		minutes = Math.round((miliseconds / 1000) / 60),
+		seconds = Math.round((miliseconds / 1000) % 60)
+	log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
+	return result
+}
+
+async function fetchAllImagePathsFromLocal(whiteLabelName) {
+	let url = cfg.urlProject + localPage + whiteLabelName,
+		paths = await getPaths(url)
+	paths = filterFileList(paths, 'SportDBClient.WebUI/Images_WLs', whiteLabelName)
+	return paths
+}
+async function fetchAllImagePathsFromLive(whiteLabelName) {
+	whiteLabelName = whiteLabelName.toUpperCase()
+	let domain = await getDomain(whiteLabelName),
+		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+		protocol = cfg.protocol,
+		url = protocol + host + livePage,
+		paths = await getPaths(url)
+	paths = filterFileList(paths, 'WebUI')
+	return paths
+}
+async function findUpdatedImageFilesWL(whiteLabelName) {
+	log('___________________________')
+	log('Checking %s Images files...', whiteLabelName)
+	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
+		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
+	if (liveImageList.length > 0)
+		return findUpdatedImageFiles(localImageList, liveImageList)
+	return []
+}
+
+/////////////////////// SYNC FILE USE LOOP & ASYNC/AWAIT ///////////////////////
+// => Open one connection and wait until done
+// => More safe in network slow case
+
+// skip file when error - need log a failed list url and download again
+async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 	try {
 		const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 		let percent = 0, d1 = new Date().getTime()
@@ -321,7 +384,7 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 				}
 			}
 			catch (error) {
-				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync.for -> ${url} => ${error}`)
+				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncFor() -> ${url} => ${error}`)
 			}
 		}
 		bar1.stop();
@@ -334,21 +397,22 @@ async function downloadFilesSync(imagePaths, host, syncFolder) {
 		)
 	} catch (error) {
 		//log(error.message)
-		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
+		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncFor() ${error}`)
 	}
 }
-async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
+// Alway download 
+async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 	try {
-		const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+		const processBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 		let percent = 0, d1 = new Date().getTime()
 		log('\nSyncing %s from %s', syncFolder, host)
-		bar1.start(imagePaths.length, 0)
+		processBar.start(imagePaths.length, 0)
 		//log('\n')
 		while (imagePaths.length > 0) {
 			imagePath = imagePaths[0]
 			//log('\r\n%s\r\n', imagePath)
 			percent = percent + 1
-			bar1.update(percent);
+			processBar.update(percent);
 			let url = cfg.protocol + host + '/' + imagePath,
 				rootFolderImages = cfg.rootFolderImages,
 				fileName = imagePath.split('/').slice(-1)[0],
@@ -377,10 +441,10 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 				await delay(TIME_DELAY_EACH_DOWNLOADING_FILE)
 			}
 			catch (error) {
-				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncLoop.for -> ${url} => ${error}`)
+				writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSyncWhile() -> ${url} => ${error}`)
 			}
 		}
-		bar1.stop();
+		processBar.stop();
 		let d2 = new Date().getTime(),
 			miliseconds = d2 - d1,
 			minutes = Math.round((miliseconds / 1000) / 60),
@@ -391,7 +455,7 @@ async function downloadFilesSyncLoop(imagePaths, host, syncFolder) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
-async function syncImagesOneWL({ whiteLabelName, isSyncWholeFolder }) {
+async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	let paths = [],
 		domain = await getDomain(whiteLabelName),
@@ -404,7 +468,7 @@ async function syncImagesOneWL({ whiteLabelName, isSyncWholeFolder }) {
 		paths = formatPath(paths, 'WebUI')
 	}
 	else {
-		let fileList = await findUpdatedImageFileWL(whiteLabelName)
+		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
 		if (fileList.length === 0)
 			log('Has error pls check msg')
 		else {
@@ -413,99 +477,15 @@ async function syncImagesOneWL({ whiteLabelName, isSyncWholeFolder }) {
 			if (fileList.deletedFiles && fileList.deletedFiles.length > 0)
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
 			if (paths.length > 0)
-				await downloadFilesSyncLoop(paths, host, syncFolder)
+				await downloadFilesSyncWhile(paths, host, syncFolder)
 			else log('All files are latest')
 		}
 	}
 }
-async function syncImagesAllWLs(whiteLabelNameList) {
+async function syncImagesWLsSafely(whiteLabelNameList) {
 	for (let name of whiteLabelNameList)
-		await syncImagesOneWL({ whiteLabelName: name })
+		await syncImagesOneWLSafely({ whiteLabelName: name })
 }
-async function fetchAllImagePathsFromLocal(whiteLabelName) {
-	let url = cfg.urlProject + localPage + whiteLabelName,
-		paths = await getPaths(url)
-	paths = filterFileList(paths, 'SportDBClient.WebUI/Images_WLs', whiteLabelName)
-	return paths
-}
-async function fetchAllImagePathsFromLive(whiteLabelName) {
-	whiteLabelName = whiteLabelName.toUpperCase()
-	let domain = await getDomain(whiteLabelName),
-		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
-		protocol = cfg.protocol,
-		url = protocol + host + livePage,
-		paths = await getPaths(url)
-	paths = filterFileList(paths, 'WebUI')
-	return paths
-}
-function getFileInList(fileName, fileList) {
-	for (let i = 0; i < fileList.length; i++)
-		if (fileName.toUpperCase() === fileList[i].fileName.toUpperCase())
-			return fileList[i]
-	return null
-}
-function findDeletedImagesFiles(localImageList, liveImageList) {
-	let result = {
-		deletedFiles: []
-	}, d1 = new Date().getTime()
-	for (let i = 0; i < localImageList.length; i++) {
-		let localFileName = localImageList[i].fileName
-		let liveFile = getFileInList(localFileName, liveImageList)
-		if (!liveFile) result.deletedFiles.push(localFileName)
-	}
-	let d2 = new Date().getTime(),
-		miliseconds = d2 - d1,
-		minutes = Math.round((miliseconds / 1000) / 60),
-		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Done -> findDeletedImagesFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
-	return result
-}
-
-function findUpdatedImageFiles(localImageList, liveImageList) {
-	let result = {
-		newFiles: [],
-		updatedFiles: [],
-		deletedFiles: []
-	}, d1 = new Date().getTime()
-	for (let i = 0; i < liveImageList.length; i++) {
-		let liveFileName = liveImageList[i].fileName
-		let localFile = getFileInList(liveFileName, localImageList)
-		if (localFile) {
-			//log(localFile)
-			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
-				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
-			if (liveFileNameDate > localFileNameDate + 3600000) // Malay = VN + 1h
-				result.updatedFiles.push(liveFileName)
-		}
-		else result.newFiles.push(liveFileName)
-	}
-	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
-	let d2 = new Date().getTime(),
-		miliseconds = d2 - d1,
-		minutes = Math.round((miliseconds / 1000) / 60),
-		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
-	return result
-}
-
-async function findUpdatedImageFileWL(whiteLabelName) {
-	log('___________________________')
-	log('Checking %s Images files...', whiteLabelName)
-	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
-		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
-	if (liveImageList.length > 0)
-		return findUpdatedImageFiles(localImageList, liveImageList)
-	return []
-}
-
-async function deleteFiles(fileList, whiteLabelName) {
-	let re = new RegExp('Images/', 'i')
-	fileList = fileList.map(fileName => fileName.replace(re, cfg.rootPath + 'Images_WLs/Images_' + whiteLabelName + '/').replace(/\//g, '\\'))
-	//log(fileList)
-	for (let fileName of fileList)
-		await deleteFile(fileName)
-}
-
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
 	let rootFolderImages = cfg.rootFolderImages;
@@ -557,16 +537,16 @@ module.exports = {
 	formatPath: formatPath,
 	//downloadFile: downloadFile,
 	//downloadFiles: downloadFiles,
-	downloadFilesSync: downloadFilesSync,
+	//downloadFilesSyncFor: downloadFilesSyncFor,
 	getSwitchCfg: getSwitchCfg,
 	getDHNumber: getDHNumber,
 	//syncImagesWL: syncImagesWL,
-	//syncImagesWLs: syncImagesWLs,
-	syncImagesOneWL: syncImagesOneWL,
-	syncImagesAllWLs: syncImagesAllWLs,
+	syncImagesWLsQuickly: syncImagesWLsQuickly,
+	//syncImagesOneWL: syncImagesOneWL,
+	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
-	fetchImage: fetchImage,
+	//fetchImage: fetchImage,
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
-	findUpdatedImageFileWL: findUpdatedImageFileWL
+	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
 };
