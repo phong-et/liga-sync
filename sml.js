@@ -23,6 +23,20 @@ let cfg = require('./switch.cfg'),
 
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
 
+function msToTime(duration, mode) {
+	if (duration >= 1000) {
+		var milliseconds = parseInt((duration % 1000)),
+			seconds = Math.floor((duration / 1000) % 60),
+			minutes = Math.floor((duration / (1000 * 60)) % 60)
+		//hours = Math.floor((duration / (1000 * 60 * 60)) % 24),
+		switch (mode) {
+			case 'ss.mmm': return seconds < 1 ? (milliseconds + ' milliseconds ') : seconds + (seconds === 1 ? ' second ' : ' seconds ') + milliseconds + ' miliseconds' //+ `(${duration})`;
+			case 'mm:ss.mmm': return minutes + (minutes === 1 ? ' minutes ' : ' minutes ') + (seconds < 1 ? (milliseconds + ' milliseconds ') : seconds + (seconds === 1 ? ' second ' : ' seconds ') + milliseconds + ' miliseconds') //+ `(${duration})`;
+		}
+		return "<miss out format time>"
+	}
+	return duration + ' miliseconds'
+}
 async function saveFile(fileName, content) {
 	return new Promise((resolve, reject) => {
 		fs.writeFile(fileName, content, function (err) {
@@ -55,7 +69,7 @@ async function writeLog(content) {
 	})
 }
 async function getPaths(url) {
-	log(url)
+	//log(url)
 	try {
 		let options = {
 			uri: url,
@@ -70,9 +84,12 @@ async function getPaths(url) {
 		paths = JSON.parse(paths)
 		return paths;
 	} catch (error) {
-		log(error)
-		if (error.message.indexOf('getaddrinfo'))
+		//log(error)
+		if (error.message.indexOf('getaddrinfo') > -1)
 			log('======> DOMAIN %s don\'t exist', error.cause.hostname)
+		//http://prntscr.com/sk7rcv
+		else if (error.message.indexOf('503') > -1)
+			log('======> %s at :', error.message, error.options.uri)
 		return []
 	}
 }
@@ -279,10 +296,8 @@ function findDeletedImagesFiles(localImageList, liveImageList) {
 		if (!liveFile) result.deletedFiles.push(localFileName)
 	}
 	let d2 = new Date().getTime(),
-		miliseconds = d2 - d1,
-		minutes = Math.round((miliseconds / 1000) / 60),
-		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Done -> findDeletedImagesFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
+		miliseconds = d2 - d1
+	log("Done -> findDeletedImagesFiles():", msToTime(miliseconds, 'ss.mmm'))
 	return result
 }
 function findUpdatedImageFiles(localImageList, liveImageList) {
@@ -305,27 +320,33 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 	}
 	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
 	let d2 = new Date().getTime(),
-		miliseconds = d2 - d1,
-		minutes = Math.round((miliseconds / 1000) / 60),
-		seconds = Math.round((miliseconds / 1000) % 60)
-	log("Done -> findUpdatedImageFiles(): %s minutes %s seconds %s miliseconds", minutes, seconds, miliseconds)
+		miliseconds = d2 - d1
+	log("Done -> findUpdatedImageFiles(): ", msToTime(miliseconds, 'ss.mmm'))
 	return result
 }
 
 async function fetchAllImagePathsFromLocal(whiteLabelName) {
 	let url = cfg.urlProject + localPage + whiteLabelName,
+		d1 = new Date().getTime(),
 		paths = await getPaths(url)
 	paths = filterFileList(paths, 'SportDBClient.WebUI/Images_WLs', whiteLabelName)
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1
+	log('Done -> fetchAllImagePathsFromLocal(): %s', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
 async function fetchAllImagePathsFromLive(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	let domain = await getDomain(whiteLabelName),
+		d1 = new Date().getTime(),
 		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
 		protocol = cfg.protocol,
 		url = protocol + host + livePage,
 		paths = await getPaths(url)
 	paths = filterFileList(paths, 'WebUI')
+	let d2 = new Date().getTime(),
+		miliseconds = d2 - d1
+	log("Done -> fetchAllImagePathsFromLive(): ", msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
 async function findUpdatedImageFilesWL(whiteLabelName) {
@@ -445,12 +466,8 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 			}
 		}
 		processBar.stop();
-		let d2 = new Date().getTime(),
-			miliseconds = d2 - d1,
-			minutes = Math.round((miliseconds / 1000) / 60),
-			seconds = Math.round((miliseconds / 1000) % 60)
-		log("Downloaded all files to %s folder in %s minutes %s seconds", syncFolder, minutes, seconds
-		)
+		let d2 = new Date().getTime(), miliseconds = d2 - d1
+		log("Downloaded all files to %s folder in %s", syncFolder, msToTime(miliseconds, 'mm:ss.mmm'))
 	} catch (error) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
