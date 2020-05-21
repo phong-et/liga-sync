@@ -18,7 +18,7 @@ let cfg = require('./switch.cfg'),
 	syncPage = "/pgajax.axd?T=SyncImages",
 	localPage = "pgajax.axd?T=GetWLImages&name=",
 	livePage = "/pgajax.axd?T=GetImages",
-	isLog = false,
+	isVisibleLog = cfg.isVisibleLog,
 	cliProgress = require('cli-progress'),
 	cliColor = require("cli-color")
 
@@ -80,7 +80,7 @@ async function getPaths(url) {
 				return body.replace(/\\/g, "/");
 			}
 		}
-		if (isLog) log("Get Paths: %s", url);
+		if (isVisibleLog) log("Get Paths: %s", url);
 		var paths = await rp(options)
 		paths = JSON.parse(paths)
 		return paths;
@@ -93,6 +93,8 @@ async function getPaths(url) {
 			log(cliColor.red('======> [503] '), error.message, error.options.uri)
 		else if (error.message.substring(0, 3) === '404')
 			log(cliColor.red('======> [404] Page not found'), error.options.uri)
+		else if (error.message.indexOf('ECONNREFUSED') > -1)
+			log(cliColor.red('======> [ECONNREFUSED] Domain has\'t not actived yet '), error.message)
 		return []
 	}
 }
@@ -300,7 +302,7 @@ function findDeletedImagesFiles(localImageList, liveImageList) {
 	}
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1
-	log("Done -> findDeletedImagesFiles():", msToTime(miliseconds, 'ss.mmm'))
+	if (isVisibleLog) log('Done -> findDeletedImagesFiles():', msToTime(miliseconds, 'ss.mmm'))
 	return result
 }
 function findUpdatedImageFiles(localImageList, liveImageList) {
@@ -324,7 +326,7 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 	result.deletedFiles = findDeletedImagesFiles(localImageList, liveImageList).deletedFiles
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1
-	log("Done -> findUpdatedImageFiles(): ", msToTime(miliseconds, 'ss.mmm'))
+	if (isVisibleLog) log('Done -> findUpdatedImageFiles(): ', msToTime(miliseconds, 'ss.mmm'))
 	return result
 }
 
@@ -335,7 +337,7 @@ async function fetchAllImagePathsFromLocal(whiteLabelName) {
 	paths = filterFileList(paths, 'SportDBClient.WebUI/Images_WLs', whiteLabelName)
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1
-	log('Done -> fetchAllImagePathsFromLocal(): %s', msToTime(miliseconds, 'ss.mmm'))
+	if (isVisibleLog) log('Done -> fetchAllImagePathsFromLocal(): %s', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
 async function fetchAllImagePathsFromLive(whiteLabelName) {
@@ -349,12 +351,12 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 	paths = filterFileList(paths, 'WebUI')
 	let d2 = new Date().getTime(),
 		miliseconds = d2 - d1
-	log("Done -> fetchAllImagePathsFromLive(): ", msToTime(miliseconds, 'ss.mmm'))
+	if (isVisibleLog) log('Done -> fetchAllImagePathsFromLive(): ', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
 async function findUpdatedImageFilesWL(whiteLabelName) {
 	log('___________________________')
-	log('Checking %s Images files...', whiteLabelName)
+	log('Syncing %s Images files...', whiteLabelName)
 	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
 		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
 	if (liveImageList.length > 0)
@@ -490,7 +492,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
 		if (fileList.length === 0)
-			log(cliColor.red('====> Has some errors !!! Check msg pls'))
+			log(cliColor.red('✖ Has some errors !'))
 		else {
 			log(fileList)
 			paths = [...fileList.newFiles, ...fileList.updatedFiles]
@@ -498,7 +500,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
 			if (paths.length > 0)
 				await downloadFilesSyncWhile(paths, host, syncFolder)
-			else log(cliColor.green('All files are latest'))
+			else log(cliColor.green('✔ All files are latest'))
 		}
 	}
 }
