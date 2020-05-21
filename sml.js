@@ -19,7 +19,8 @@ let cfg = require('./switch.cfg'),
 	localPage = "pgajax.axd?T=GetWLImages&name=",
 	livePage = "/pgajax.axd?T=GetImages",
 	isLog = false,
-	cliProgress = require('cli-progress')
+	cliProgress = require('cli-progress'),
+	cliColor = require("cli-color")
 
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
 
@@ -86,10 +87,12 @@ async function getPaths(url) {
 	} catch (error) {
 		//log(error)
 		if (error.message.indexOf('getaddrinfo') > -1)
-			log('======> DOMAIN %s don\'t exist', error.cause.hostname)
+			log(cliColor.red('======> DOMAIN %s don\'t exist'), error.cause.hostname)
 		//http://prntscr.com/sk7rcv
-		else if (error.message.indexOf('503') > -1)
-			log('======> %s at :', error.message, error.options.uri)
+		else if (error.message.substring(0, 3) === '503')
+			log(cliColor.red('======> [503] '), error.message, error.options.uri)
+		else if (error.message.substring(0, 3) === '404')
+			log(cliColor.red('======> [404] Page not found'), error.options.uri)
 		return []
 	}
 }
@@ -487,7 +490,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
 		if (fileList.length === 0)
-			log('Has error pls check msg')
+			log(cliColor.red('====> Has some errors !!! Check msg pls'))
 		else {
 			log(fileList)
 			paths = [...fileList.newFiles, ...fileList.updatedFiles]
@@ -495,7 +498,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
 			if (paths.length > 0)
 				await downloadFilesSyncWhile(paths, host, syncFolder)
-			else log('All files are latest')
+			else log(cliColor.green('All files are latest'))
 		}
 	}
 }
