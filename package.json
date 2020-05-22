@@ -12,6 +12,7 @@
   "dependencies": {
     "cli-color": "^2.0.0",
     "cli-progress": "^3.8.0",
+    "commander": "^5.1.0",
     "image-downloader": "^3.5.0",
     "napajs": "^0.2.3",
     "request": "^2.88.0",

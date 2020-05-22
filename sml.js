@@ -164,6 +164,7 @@ async function getDomain(whiteLabelName) {
 		log(error)
 	}
 }
+
 async function fetchTextFile(url) {
 	try {
 		return await rp({
@@ -264,10 +265,16 @@ async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 		next()
 	}
 }
+function includeWww() {
+	return cfg.hasWww ? 'www.' : ''
+}
+function setHas3w(flag) {
+	cfg.hasWww = flag
+}
 async function syncImagesOneWLQuickly(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	log('Syncing %s', whiteLabelName)
-	let host = 'www.' + whiteLabelName + '.com',
+	let host = includeWww() + whiteLabelName + '.com',
 		syncFolder = 'Images_' + whiteLabelName,
 		protocol = cfg.protocol,
 		url = protocol + host + syncPage,
@@ -479,15 +486,20 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 }
 async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 	whiteLabelName = whiteLabelName.toUpperCase()
+	if (await getDHNumber(whiteLabelName) === undefined) {
+		log('White label %s don\'t exist', whiteLabelName);
+		return
+	}
 	let paths = [],
 		domain = await getDomain(whiteLabelName),
 		protocol = cfg.protocol,
-		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+		host = includeWww() + (domain ? domain : whiteLabelName + '.com'),
 		syncFolder = 'Images_' + whiteLabelName
 	if (isSyncWholeFolder) {
 		let url = protocol + host + syncPage
 		paths = await getPaths(url)
 		paths = formatPath(paths, 'WebUI')
+		await downloadFilesSyncWhile(paths, host, syncFolder)
 	}
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
@@ -504,9 +516,9 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 		}
 	}
 }
-async function syncImagesWLsSafely(whiteLabelNameList) {
+async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder) {
 	for (let name of whiteLabelNameList)
-		await syncImagesOneWLSafely({ whiteLabelName: name })
+		await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder })
 }
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
@@ -567,8 +579,37 @@ module.exports = {
 	//syncImagesOneWL: syncImagesOneWL,
 	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
+	setHas3w: setHas3w
 	//fetchImage: fetchImage,
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
 	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
 };
+
+(async function () {
+	const { program } = require('commander'),
+		sync = require('./sml'),
+		log = console.log
+	program
+		.version('0.0.1')
+		.option('-d, --debug', 'output extra debugging')
+		.option('-s, --safe', 'sync latest Images slowly and safely')
+		.option('-q, --quick', 'sync latest Images quickly')
+		.option('-w3w, --without-www', 'sync with without www url')
+		.option('-a, --all', 'sync all Images')
+		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
+	program.parse(process.argv);
+	if (program.debug) console.log(program.opts())
+	if (program.whitelabel) {
+		if (program.withoutWww)
+			sync.setHas3w(false)
+		if (program.quick)
+			log('Quick downloading has being implemented yet...')
+		else {
+			let isSyncWholeFolder = false
+			if (program.all)
+				isSyncWholeFolder = true
+			sync.syncImagesWLsSafely(program.whitelabel.split(','), isSyncWholeFolder)
+		}
+	}
+}())
