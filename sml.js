@@ -504,7 +504,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
 		if (fileList.length === 0)
-			log(cliColor.red('✖ Has some errors !'))
+			log(cliColor.red('X Has some errors !'))
 		else {
 			log(fileList)
 			paths = [...fileList.newFiles, ...fileList.updatedFiles]
@@ -512,13 +512,19 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
 			if (paths.length > 0)
 				await downloadFilesSyncWhile(paths, host, syncFolder)
-			else log(cliColor.green('✔ All files are latest'))
+			else log(cliColor.green('√ All files are latest'))
 		}
 	}
 }
-async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder) {
-	for (let name of whiteLabelNameList)
-		await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder })
+async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex) {
+	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
+	let index = 0
+	if (!fromIndex) fromIndex = 0
+	for (let name of whiteLabelNameList) {
+		if (index >= fromIndex)
+			await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder })
+		index = index + 1
+	}
 }
 /////////////////////////// FOR OLD SWITCH ////////////////
 async function saveImage(pathImage, host) {
@@ -598,6 +604,7 @@ module.exports = {
 		.option('-w3w, --without-www', 'sync with without www url')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
+		.option('-f, --from <index>', 'sync from index of WL list')
 	program.parse(process.argv);
 	if (program.debug) console.log(program.opts())
 	if (program.whitelabel) {
@@ -606,10 +613,14 @@ module.exports = {
 		if (program.quick)
 			log('Quick downloading has being implemented yet...')
 		else {
-			let isSyncWholeFolder = false
+			let isSyncWholeFolder = false,
+				fromIndex = 0
 			if (program.all)
 				isSyncWholeFolder = true
-			sync.syncImagesWLsSafely(program.whitelabel.split(','), isSyncWholeFolder)
+			let whiteLabelNameList = program.whitelabel.split(',')
+			if (whiteLabelNameList.length > 1)
+				fromIndex = program.from
+			sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex)
 		}
 	}
 }())
