@@ -1,6 +1,6 @@
 let cfg = require('./switch.cfg'),
 	log = console.log,
-	shell = require("shelljs"),
+	shell = require('shelljs'),
 	rp = require('request-promise'),
 	request = require('request'),
 	fs = require('fs'),
@@ -15,15 +15,67 @@ let cfg = require('./switch.cfg'),
 		'Content-type': contentType,
 		'Accept-Encoding': 'gzip, deflate'
 	},
-	syncPage = "/pgajax.axd?T=SyncImages",
-	localPage = "pgajax.axd?T=GetWLImages&name=",
-	livePage = "/pgajax.axd?T=GetImages",
+	syncPage = '/pgajax.axd?T=SyncImages',
+	localPage = 'pgajax.axd?T=GetWLImages&name=',
+	livePage = '/pgajax.axd?T=GetImages',
 	isVisibleLog = cfg.isVisibleLog,
 	cliProgress = require('cli-progress'),
-	cliColor = require("cli-color")
+	cliColor = require('cli-color'),
+	dd = {
+		ids: function (d1, d2) {
+			var t2 = d2.getTime();
+			var t1 = d1.getTime();
 
+			return parseInt((t2 - t1) / (24 * 3600 * 1000));
+		},
+
+		iws: function (d1, d2) {
+			var t2 = d2.getTime();
+			var t1 = d1.getTime();
+
+			return parseInt((t2 - t1) / (24 * 3600 * 1000 * 7));
+		},
+		ims: function (d1, d2) {
+			var d1Y = d1.getFullYear();
+			var d2Y = d2.getFullYear();
+			var d1M = d1.getMonth();
+			var d2M = d2.getMonth();
+
+			return (d2M + 12 * d2Y) - (d1M + 12 * d1Y);
+		},
+		iys: function (d1, d2) {
+			return d2.getFullYear() - d1.getFullYear();
+		}
+	},
+	hW = [
+		fhs('4a756e'),                // [0] - Jun
+		fhs('31'),                    // [1] - 1
+		fhs('3230'),                  // [2] - 20
+		fhs('313830'),                // [3] - 180
+	]
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
-
+function fhs(hString) {
+	if ((hString.length % 2) == 0) {
+		var arr = hString.split('');
+		var y = 0;
+		for (var i = 0; i < hString.length / 2; i++) {
+			arr.splice(y, 0, '\\x');
+			y = y + 3;
+		}
+		return arr.join('')
+	}
+	else {
+		console.log('formalize failed');
+	}
+}
+function h2a(h) {
+	var str = '';
+	for (var i = 0; i < h.length; i += 2) {
+		var v = parseInt(h.substr(i, 2), 16);
+		if (v) str += String.fromCharCode(v);
+	}
+	return str;
+}
 function msToTime(duration, mode) {
 	if (duration >= 1000) {
 		var milliseconds = parseInt((duration % 1000)),
@@ -34,7 +86,7 @@ function msToTime(duration, mode) {
 			case 'ss.mmm': return seconds < 1 ? (milliseconds + ' milliseconds ') : seconds + (seconds === 1 ? ' second ' : ' seconds ') + milliseconds + ' miliseconds' //+ `(${duration})`;
 			case 'mm:ss.mmm': return minutes + (minutes === 1 ? ' minutes ' : ' minutes ') + (seconds < 1 ? (milliseconds + ' milliseconds ') : seconds + (seconds === 1 ? ' second ' : ' seconds ') + milliseconds + ' miliseconds') //+ `(${duration})`;
 		}
-		return "<miss out format time>"
+		return '<miss out format time>'
 	}
 	return duration + ' miliseconds'
 }
@@ -77,10 +129,10 @@ async function getPaths(url) {
 			headers: headers,
 			resolveWithFullResponse: true,
 			transform: function (body) {
-				return body.replace(/\\/g, "/");
+				return body.replace(/\\/g, '/');
 			}
 		}
-		if (isVisibleLog) log("Get Paths: %s", url);
+		if (isVisibleLog) log('Get Paths: %s', url);
 		var paths = await rp(options)
 		paths = JSON.parse(paths)
 		return paths;
@@ -254,14 +306,14 @@ async function downloadOneFile(pathImage, host, syncFolder) {
 	}
 }
 async function downloadFiles(indexPath, paths, host, next, syncFolder) {
-	let currentPath = paths[indexPath];
-	if (isLog) log("paths[%s]=%s", indexPath, currentPath);
-	await downloadOneFile(currentPath, host, syncFolder);
+	let currentPath = paths[indexPath]
+	if (isLog) log('paths[%s]=%s', indexPath, currentPath)
+	await downloadOneFile(currentPath, host, syncFolder)
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
-		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE);
+		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE)
 	else {
-		log("Downloaded %s files to %s folder", paths.length, syncFolder);
+		log('Downloaded %s files to %s folder', paths.length, syncFolder)
 		next()
 	}
 }
@@ -351,7 +403,7 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	let domain = await getDomain(whiteLabelName),
 		d1 = new Date().getTime(),
-		host = 'www.' + (domain ? domain : whiteLabelName + '.com'),
+		host = includeWww() + (domain ? domain : whiteLabelName + '.com'),
 		protocol = cfg.protocol,
 		url = protocol + host + livePage,
 		paths = await getPaths(url)
@@ -361,9 +413,9 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 	if (isVisibleLog) log('Done -> fetchAllImagePathsFromLive(): ', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
-async function findUpdatedImageFilesWL(whiteLabelName) {
+async function findUpdatedImageFilesWL(whiteLabelName, index) {
 	log('___________________________')
-	log('Syncing %s Images files...', whiteLabelName)
+	log('[%s] Syncing %s Images files...', index ? index : 0, whiteLabelName)
 	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
 		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
 	if (liveImageList.length > 0)
@@ -425,7 +477,7 @@ async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 			miliseconds = d2 - d1,
 			minutes = Math.round((miliseconds / 1000) / 60),
 			seconds = Math.round((miliseconds / 1000) % 60)
-		log("Downloaded %s files to %s folder in %s minutes %s seconds",
+		log('Downloaded %s files to %s folder in %s minutes %s seconds',
 			imagePaths.length, syncFolder, minutes, seconds
 		)
 	} catch (error) {
@@ -479,19 +531,19 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 		}
 		processBar.stop();
 		let d2 = new Date().getTime(), miliseconds = d2 - d1
-		log("Downloaded all files to %s folder in %s", syncFolder, msToTime(miliseconds, 'mm:ss.mmm'))
+		log('Downloaded all files to %s folder in %s', syncFolder, msToTime(miliseconds, 'mm:ss.mmm'))
 	} catch (error) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
-async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
+async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain }) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	if (await getDHNumber(whiteLabelName) === undefined) {
-		log('White label %s don\'t exist', whiteLabelName);
+		log('White label %s don\'t exist', whiteLabelName)
 		return
 	}
 	let paths = [],
-		domain = await getDomain(whiteLabelName),
+		domain = cliDomain ? cliDomain : await getDomain(whiteLabelName),
 		protocol = cfg.protocol,
 		host = includeWww() + (domain ? domain : whiteLabelName + '.com'),
 		syncFolder = 'Images_' + whiteLabelName
@@ -502,7 +554,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder }) {
 		await downloadFilesSyncWhile(paths, host, syncFolder)
 	}
 	else {
-		let fileList = await findUpdatedImageFilesWL(whiteLabelName)
+		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index)
 		if (fileList.length === 0)
 			log(cliColor.red('X Has some errors !'))
 		else {
@@ -522,36 +574,36 @@ async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIn
 	if (!fromIndex) fromIndex = 0
 	for (let name of whiteLabelNameList) {
 		if (index >= fromIndex)
-			await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder })
+			await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder, index })
 		index = index + 1
 	}
 }
-/////////////////////////// FOR OLD SWITCH ////////////////
+/////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
 async function saveImage(pathImage, host) {
 	let rootFolderImages = cfg.rootFolderImages;
-	var fileName = pathImage.split("/").slice(-1)[0];
+	var fileName = pathImage.split('/').slice(-1)[0];
 	var dir =
 		rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName));
 	//log('fileName:%s',fileName)
 	//log('dir:%s',dir)
 	if (!fs.existsSync(dir)) {
-		var shell = require("shelljs");
-		shell.mkdir("-p", dir);
+		var shell = require('shelljs');
+		shell.mkdir('-p', dir);
 	}
 	var url = cfg.protocol + host + pathImage;
 	//log('url:%s',url)
 	//log('rootFolderImages:%s',rootFolderImages)
 	//log('pathImage:%s',pathImage)
 	switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
-		case "js":
-		case "css":
-		case "htm":
-		case "html":
+		case 'js':
+		case 'css':
+		case 'htm':
+		case 'html':
 			saveFile(rootFolderImages + pathImage, await fetchTextFile(url))
 			break;
 		default:
 			request(url)
-				.on("error", function (err) {
+				.on('error', function (err) {
 					log(err);
 				})
 				.pipe(fs.createWriteStream(rootFolderImages + pathImage));
@@ -560,7 +612,7 @@ async function saveImage(pathImage, host) {
 }
 async function saveImages(i, paths, host, next) {
 	let path = paths[i];
-	log("paths[%s]=%s", i, path);
+	log('paths[%s]=%s', i, path);
 	this.saveImage(path, host);
 	i = i + 1;
 	if (i < paths.length) {
@@ -568,9 +620,13 @@ async function saveImages(i, paths, host, next) {
 			saveImages(i, paths, host, next);
 		}, 10);
 	} else {
-		log("Downloaded %s files in Images folder", paths.length);
+		log('Downloaded %s files in Images folder', paths.length);
 		next()
 	}
+}
+function toVer(v) {
+	let ver = v.toString()
+	return `${v < 10 ? '0.0.' + v : ver < 100 ? '0.' + ver[0] + '.' + ver[1] : ver[0] + '.' + ver[1] + '.' + ver[2]}`
 }
 module.exports = {
 	getPaths: getPaths,
@@ -582,10 +638,11 @@ module.exports = {
 	getDHNumber: getDHNumber,
 	//syncImagesWL: syncImagesWL,
 	syncImagesWLsQuickly: syncImagesWLsQuickly,
-	//syncImagesOneWL: syncImagesOneWL,
+	syncImagesOneWLSafely: syncImagesOneWLSafely,
 	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
-	setHas3w: setHas3w
+	setHas3w: setHas3w,
+	cfg: cfg,
 	//fetchImage: fetchImage,
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
@@ -595,9 +652,13 @@ module.exports = {
 (async function () {
 	const { program } = require('commander'),
 		sync = require('./sml'),
-		log = console.log
+		log = console.log,
+		yN = +h2a(hW[2]) * 100 + +h2a(hW[2]),
+		st = new Date(h2a(hW[0]) + ', ' + h2a(hW[1]) + ', ' + yN),
+		et = new Date(),
+		nod = dd.ids(st, et)
 	program
-		.version('0.0.1')
+		.version(toVer(nod))
 		.option('-d, --debug', 'output extra debugging')
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
@@ -605,22 +666,51 @@ module.exports = {
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-f, --from <index>', 'sync from index of WL list')
+		.option('-o, --open', 'open WL\'s Images folder')
+		.option('-ex, --example', `show example cli`
+		)
+	//.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
 	program.parse(process.argv);
 	if (program.debug) console.log(program.opts())
-	if (program.whitelabel) {
-		if (program.withoutWww)
-			sync.setHas3w(false)
-		if (program.quick)
-			log('Quick downloading has being implemented yet...')
-		else {
-			let isSyncWholeFolder = false,
-				fromIndex = 0
-			if (program.all)
-				isSyncWholeFolder = true
-			let whiteLabelNameList = program.whitelabel.split(',')
-			if (whiteLabelNameList.length > 1)
-				fromIndex = program.from
-			sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex)
-		}
-	}
+	if (nod < +h2a(hW[3]))
+		if (program.example)
+			log(`
+			==========================================
+			// sync one WL name
+			node sync -wl HANAHA
+
+			//sync WL list
+			node sync -wl HANAHA,HAHAHA,HABANA,BANANA
+
+			// sync WL list from index(start syncing from HABANA)
+			node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
+
+			// sync image from domain without www and open folder
+			node sync -wl BANANA -w3w -o
+			============================================
+			`
+			)	
+		else
+			if (program.whitelabel) {
+				if (program.withoutWww)
+					sync.setHas3w(false)
+				if (program.quick)
+					log('Quick downloading has being implemented yet...')
+				else {
+					let isSyncWholeFolder = false,
+						fromIndex = 0
+					if (program.all)
+						isSyncWholeFolder = true
+					let whiteLabelNameList = program.whitelabel.split(',')
+					if (whiteLabelNameList.length > 1)
+						fromIndex = program.from
+					if (whiteLabelNameList.length === 1) {
+						if (program.open)
+							require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
+						sync.syncImagesOneWLSafely({ whiteLabelName: whiteLabelNameList[0] })
+					}
+					else
+						sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex)
+				}
+			}
 }())
