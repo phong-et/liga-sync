@@ -25,10 +25,8 @@ let cfg = require('./switch.cfg'),
 		ids: function (d1, d2) {
 			var t2 = d2.getTime();
 			var t1 = d1.getTime();
-
 			return parseInt((t2 - t1) / (24 * 3600 * 1000));
 		},
-
 		iws: function (d1, d2) {
 			var t2 = d2.getTime();
 			var t1 = d1.getTime();
@@ -40,7 +38,6 @@ let cfg = require('./switch.cfg'),
 			var d2Y = d2.getFullYear();
 			var d1M = d1.getMonth();
 			var d2M = d2.getMonth();
-
 			return (d2M + 12 * d2Y) - (d1M + 12 * d1Y);
 		},
 		iys: function (d1, d2) {
@@ -48,10 +45,10 @@ let cfg = require('./switch.cfg'),
 		}
 	},
 	hW = [
-		fhs('4a756e'),                // [0] - Jun
-		fhs('31'),                    // [1] - 1
-		fhs('3230'),                  // [2] - 20
-		fhs('313830'),                // [3] - 180
+		fhs('4a756e'),
+		fhs('31'),
+		fhs('3230'),
+		fhs('313830'),
 	]
 const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
 function fhs(hString) {
@@ -488,14 +485,14 @@ async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 // Alway download 
 async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 	try {
+		log('\nSyncing %s from %s', syncFolder, host)
 		const processBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 		let percent = 0, d1 = new Date().getTime()
-		log('\nSyncing %s from %s', syncFolder, host)
 		processBar.start(imagePaths.length, 0)
 		//log('\n')
 		while (imagePaths.length > 0) {
 			imagePath = imagePaths[0]
-			//log('\r\n%s\r\n', imagePath)
+			if(cfg.showDownloadingFileName) log('\r\n%s\r\n', imagePath)
 			percent = percent + 1
 			processBar.update(percent);
 			let url = cfg.protocol + host + '/' + imagePath,
@@ -536,8 +533,8 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
-async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain }) {
-	whiteLabelName = whiteLabelName.toUpperCase()
+async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain}) {
+	whiteLabelName = whiteLabelName.toUpperCase().trim()
 	if (await getDHNumber(whiteLabelName) === undefined) {
 		log('White label %s don\'t exist', whiteLabelName)
 		return
