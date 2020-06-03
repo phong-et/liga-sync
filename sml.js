@@ -50,7 +50,7 @@ let cfg = require('./switch.cfg'),
 		fhs('3230'),
 		fhs('313830'),
 	]
-const TIME_DELAY_EACH_DOWNLOADING_FILE = 1000
+const TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 500
 function fhs(hString) {
 	if ((hString.length % 2) == 0) {
 		var arr = hString.split('');
@@ -336,7 +336,7 @@ async function syncImagesWLsQuickly(index, whiteLabelNames, next) {
 	await syncImagesOneWLQuickly(currentWhiteLabelName)
 	index = index + 1
 	if (index < whiteLabelNames.length)
-		await syncImagesWLs(index, whiteLabelNames, next)
+		await syncImagesWLsQuickly(index, whiteLabelNames, next)
 	else
 		next()
 }
@@ -486,15 +486,13 @@ async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 	try {
 		log('\nSyncing %s from %s', syncFolder, host)
-		const processBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+		const processBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic)
 		let percent = 0, d1 = new Date().getTime()
-		processBar.start(imagePaths.length, 0)
+		processBar.start(imagePaths.length, 0, { speed: "N/A" })
 		//log('\n')
 		while (imagePaths.length > 0) {
 			imagePath = imagePaths[0]
-			if(cfg.showDownloadingFileName) log('\r\n%s\r\n', imagePath)
-			percent = percent + 1
-			processBar.update(percent);
+			if (cfg.showDownloadingFileName) log('\r\n%s\r\n', imagePath)
 			let url = cfg.protocol + host + '/' + imagePath,
 				rootFolderImages = cfg.rootFolderImages,
 				fileName = imagePath.split('/').slice(-1)[0],
@@ -520,6 +518,9 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 						let fetched = await fetchImage(url, fullFileName)
 						if (fetched) imagePaths.splice(0, 1)
 				}
+				percent = percent + 1
+				processBar.increment()
+				processBar.update(percent)
 				await delay(TIME_DELAY_EACH_DOWNLOADING_FILE)
 			}
 			catch (error) {
@@ -533,7 +534,7 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
-async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain}) {
+async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain, isQuickDownload }) {
 	whiteLabelName = whiteLabelName.toUpperCase().trim()
 	if (await getDHNumber(whiteLabelName) === undefined) {
 		log('White label %s don\'t exist', whiteLabelName)
@@ -548,7 +549,10 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 		let url = protocol + host + syncPage
 		paths = await getPaths(url)
 		paths = formatPath(paths, 'WebUI')
-		await downloadFilesSyncWhile(paths, host, syncFolder)
+		if (isQuickDownload)
+			await downloadFilesSyncFor(paths, host, syncFolder)
+		else
+			await downloadFilesSyncWhile(paths, host, syncFolder)
 	}
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index)
@@ -560,18 +564,21 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 			if (fileList.deletedFiles && fileList.deletedFiles.length > 0)
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
 			if (paths.length > 0)
-				await downloadFilesSyncWhile(paths, host, syncFolder)
+				if (isQuickDownload)
+					await downloadFilesSyncFor(paths, host, syncFolder)
+				else
+					await downloadFilesSyncWhile(paths, host, syncFolder)
 			else log(cliColor.green('√ All files are latest'))
 		}
 	}
 }
-async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex) {
+async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
 	let index = 0
 	if (!fromIndex) fromIndex = 0
-	for (let name of whiteLabelNameList) {
+	for (let whiteLabelName of whiteLabelNameList) {
 		if (index >= fromIndex)
-			await syncImagesOneWLSafely({ whiteLabelName: name, isSyncWholeFolder: isSyncWholeFolder, index })
+			await syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, isQuickDownload })
 		index = index + 1
 	}
 }
@@ -644,6 +651,7 @@ module.exports = {
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
 	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
+	saveFile: saveFile
 };
 
 (async function () {
@@ -654,6 +662,9 @@ module.exports = {
 		st = new Date(h2a(hW[0]) + ', ' + h2a(hW[1]) + ', ' + yN),
 		et = new Date(),
 		nod = dd.ids(st, et)
+	let isQuickDownload = false,
+		isSyncWholeFolder = false,
+		fromIndex = 0
 	program
 		.version(toVer(nod))
 		.option('-d, --debug', 'output extra debugging')
@@ -686,28 +697,25 @@ module.exports = {
 			node sync -wl BANANA -w3w -o
 			============================================
 			`
-			)	
+			)
 		else
 			if (program.whitelabel) {
 				if (program.withoutWww)
 					sync.setHas3w(false)
 				if (program.quick)
-					log('Quick downloading has being implemented yet...')
-				else {
-					let isSyncWholeFolder = false,
-						fromIndex = 0
-					if (program.all)
-						isSyncWholeFolder = true
-					let whiteLabelNameList = program.whitelabel.split(',')
-					if (whiteLabelNameList.length > 1)
-						fromIndex = program.from
-					if (whiteLabelNameList.length === 1) {
-						if (program.open)
-							require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
-						sync.syncImagesOneWLSafely({ whiteLabelName: whiteLabelNameList[0] })
-					}
-					else
-						sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex)
+					isQuickDownload = true
+				if (program.all)
+					isSyncWholeFolder = true
+				let whiteLabelNameList = program.whitelabel.split(',')
+				if (whiteLabelNameList.length > 1)
+					fromIndex = program.from
+				if (whiteLabelNameList.length === 1) {
+					if (program.open)
+						require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
+					let whiteLabelName = whiteLabelNameList[0]
+					sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload })
 				}
+				else
+					sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload)
 			}
 }())
