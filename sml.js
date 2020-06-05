@@ -4,6 +4,7 @@ let cfg = require('./switch.cfg'),
 	rp = require('request-promise'),
 	request = require('request'),
 	fs = require('fs'),
+	path = require('path'),
 	userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36',
 	contentType = 'text/html',
 	headers = {
@@ -21,36 +22,37 @@ let cfg = require('./switch.cfg'),
 	isVisibleLog = cfg.isVisibleLog,
 	cliProgress = require('cli-progress'),
 	cliColor = require('cli-color'),
-	dd = {
-		ids: function (d1, d2) {
-			var t2 = d2.getTime();
-			var t1 = d1.getTime();
-			return parseInt((t2 - t1) / (24 * 3600 * 1000));
-		},
-		iws: function (d1, d2) {
-			var t2 = d2.getTime();
-			var t1 = d1.getTime();
+	dd = { ids: function (d1, d2) { let t2 = d2.getTime(), t1 = d1.getTime(); return parseInt((t2 - t1) / (24 * 3600 * 1000)) } },
+	hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('313830')],
+	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 500
 
-			return parseInt((t2 - t1) / (24 * 3600 * 1000 * 7));
-		},
-		ims: function (d1, d2) {
-			var d1Y = d1.getFullYear();
-			var d2Y = d2.getFullYear();
-			var d1M = d1.getMonth();
-			var d2M = d2.getMonth();
-			return (d2M + 12 * d2Y) - (d1M + 12 * d1Y);
-		},
-		iys: function (d1, d2) {
-			return d2.getFullYear() - d1.getFullYear();
-		}
-	},
-	hW = [
-		fhs('4a756e'),
-		fhs('31'),
-		fhs('3230'),
-		fhs('313830'),
-	]
-const TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 500
+
+function cleanEmptyFoldersRecursively(folder) {
+	var fs = require('fs');
+	var path = require('path');
+
+	var isDir = fs.statSync(folder).isDirectory();
+	if (!isDir) {
+		return;
+	}
+	var files = fs.readdirSync(folder);
+	if (files.length > 0) {
+		files.forEach(function (file) {
+			var fullPath = path.join(folder, file);
+			cleanEmptyFoldersRecursively(fullPath);
+		});
+
+		// re-evaluate files; after deleting subfolder
+		// we may have parent folder empty now
+		files = fs.readdirSync(folder);
+	}
+
+	if (files.length == 0) {
+		//log("removing: ", folder);
+		fs.rmdirSync(folder);
+		return;
+	}
+}
 function fhs(hString) {
 	if ((hString.length % 2) == 0) {
 		var arr = hString.split('');
@@ -571,6 +573,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 			else log(cliColor.green('√ All files are latest'))
 		}
 	}
+	cleanEmptyFoldersRecursively(cfg.rootFolderImages + 'Images_WLs\\' + syncFolder)
 }
 async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
