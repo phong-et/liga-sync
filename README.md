@@ -50,11 +50,11 @@ node sync -wl BANANA -w3w -o
 All notable changes to this project will be documented in this part.
 
 ## [0.0.4]
-### Fix bugs
-- Trim space whitelabel name
-- **--all** option
-- Process bar
-- Remove all empty folders after syncing complete
+### Fixed bugs 
+- Trim space whitelabel name 
+- **--all** option 
+- Process bar 
+- Remove all empty folders after syncing completed 
 
 ### Added
 - **deplayTime** prop at switch.cfg
