@@ -48,6 +48,13 @@ node sync -wl BANANA -w3w -o
 
 # Change log
 All notable changes to this project will be documented in this part.
+## [0.0.5]
+### Fixed bugs 
+- Uppercase whitelabel name 
+### Added
+- Final Report
+### Changed
+- **quick** is default sync, disable quick by add -s/--safe
 
 ## [0.0.4]
 ### Fixed bugs 
