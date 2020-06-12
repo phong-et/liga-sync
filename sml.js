@@ -24,7 +24,7 @@ let cfg = require('./switch.cfg'),
 	cliColor = require('cli-color'),
 	dd = { ids: function (d1, d2) { let t2 = d2.getTime(), t1 = d1.getTime(); return parseInt((t2 - t1) / (24 * 3600 * 1000)) } },
 	hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('313830')],
-	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 500
+	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 222
 
 
 function cleanEmptyFoldersRecursively(folder) {
@@ -587,6 +587,7 @@ async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIn
 	let index = 0, finalReport = { error: [], success: [] }
 	if (!fromIndex) fromIndex = 0
 	for (let whiteLabelName of whiteLabelNameList) {
+		whiteLabelName = whiteLabelName.toUpperCase()
 		if (index >= fromIndex) {
 			let isSuccessSync = await syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, isQuickDownload })
 			if (isSuccessSync)
@@ -679,11 +680,11 @@ module.exports = {
 		st = new Date(h2a(hW[0]) + ', ' + h2a(hW[1]) + ', ' + yN),
 		et = new Date(),
 		nod = dd.ids(st, et)
-	let isQuickDownload = false,
+	let isQuickDownload = true,
 		isSyncWholeFolder = false,
 		fromIndex = 0
 	program
-		.version(toVer(nod))
+		.version(toVer(nod) + '4')
 		.option('-d, --debug', 'output extra debugging')
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
@@ -719,8 +720,8 @@ module.exports = {
 			if (program.whitelabel) {
 				if (program.withoutWww)
 					sync.setHas3w(false)
-				if (program.quick)
-					isQuickDownload = true
+				if (program.safe)
+					isQuickDownload = false
 				if (program.all)
 					isSyncWholeFolder = true
 				let whiteLabelNameList = program.whitelabel.split(',')

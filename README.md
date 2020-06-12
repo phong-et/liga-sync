@@ -61,7 +61,8 @@ All notable changes to this project will be documented in this part.
 - **showDownloadingFileName** prop at switch.cfg
 - **--quick** option 
 - Final Report
-
+### Changed
+- **quick** is default sync, disable quick by add -s/--safe
 
 ## 0.0.1 - 2020-6-1
  - 1st release
