@@ -60,6 +60,7 @@ All notable changes to this project will be documented in this part.
 - **deplayTime** prop at switch.cfg
 - **showDownloadingFileName** prop at switch.cfg
 - **--quick** option 
+- Final Report
 
 
 ## 0.0.1 - 2020-6-1
