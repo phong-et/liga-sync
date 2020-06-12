@@ -538,6 +538,7 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 }
 async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain, isQuickDownload }) {
 	whiteLabelName = whiteLabelName.toUpperCase().trim()
+	let status
 	if (await getDHNumber(whiteLabelName) === undefined) {
 		log('White label %s don\'t exist', whiteLabelName)
 		return
@@ -558,8 +559,10 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 	}
 	else {
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index)
-		if (fileList.length === 0)
+		if (fileList.length === 0) {
 			log(cliColor.red('X Has some errors !'))
+			status = false
+		}
 		else {
 			log(fileList)
 			paths = [...fileList.newFiles, ...fileList.updatedFiles]
@@ -570,20 +573,31 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 					await downloadFilesSyncFor(paths, host, syncFolder)
 				else
 					await downloadFilesSyncWhile(paths, host, syncFolder)
-			else log(cliColor.green('√ All files are latest'))
+			else {
+				log(cliColor.green('√ All files are latest'))
+				status = true
+			}
 		}
 	}
 	cleanEmptyFoldersRecursively(cfg.rootFolderImages + 'Images_WLs\\' + syncFolder)
+	return status
 }
 async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
-	let index = 0
+	let index = 0, finalReport = { error: [], success: [] }
 	if (!fromIndex) fromIndex = 0
 	for (let whiteLabelName of whiteLabelNameList) {
-		if (index >= fromIndex)
-			await syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, isQuickDownload })
+		if (index >= fromIndex) {
+			let isSuccessSync = await syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, isQuickDownload })
+			if (isSuccessSync)
+				finalReport.success.push(whiteLabelName)
+			else
+				finalReport.error.push(whiteLabelName)
+		}
 		index = index + 1
 	}
+	log('===================== Final Report =====================')
+	log(finalReport)
 }
 /////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
 async function saveImage(pathImage, host) {
