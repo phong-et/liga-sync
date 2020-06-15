@@ -48,6 +48,10 @@ node sync -wl BANANA -w3w -o
 
 # Change log
 All notable changes to this project will be documented in this part.
+## [0.0.6]
+### Fixed bugs 
+- Fixed program is stopped by deleting file not found
+- Final Report list WLs are updated images to Error list
 ## [0.0.5]
 ### Fixed bugs 
 - Uppercase whitelabel name 

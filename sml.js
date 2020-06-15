@@ -100,7 +100,7 @@ async function saveFile(fileName, content) {
 async function deleteFile(fileName) {
 	return new Promise((resolve, reject) => {
 		fs.unlink(fileName, function (err) {
-			if (err) reject(err)
+			if (err) log(err)
 			resolve(true)
 		})
 	})
@@ -538,7 +538,7 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 }
 async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain, isQuickDownload }) {
 	whiteLabelName = whiteLabelName.toUpperCase().trim()
-	let status
+	let status = true
 	if (await getDHNumber(whiteLabelName) === undefined) {
 		log('White label %s don\'t exist', whiteLabelName)
 		return
@@ -573,10 +573,8 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 					await downloadFilesSyncFor(paths, host, syncFolder)
 				else
 					await downloadFilesSyncWhile(paths, host, syncFolder)
-			else {
+			else
 				log(cliColor.green('√ All files are latest'))
-				status = true
-			}
 		}
 	}
 	cleanEmptyFoldersRecursively(cfg.rootFolderImages + 'Images_WLs\\' + syncFolder)
