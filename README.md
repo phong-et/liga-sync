@@ -48,6 +48,10 @@ node sync -wl BANANA -w3w -o
 
 # Change log
 All notable changes to this project will be documented in this part.
+
+# Swith command 
+    - Wait 15s to copy image
+
 ## [0.0.6]
 ### Fixed bugs 
 - Fixed program is stopped by deleting file not found
