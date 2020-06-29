@@ -56,6 +56,8 @@ All notable changes to this project will be documented in this part.
 ### Fixed bugs 
 - Fixed program is stopped by deleting file not found
 - Final Report list WLs are updated images to Error list
+### Added
+- **--sq**/**--supper-quick** option (pre-release)
 ## [0.0.5]
 ### Fixed bugs 
 - Uppercase whitelabel name 
