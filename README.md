@@ -56,6 +56,16 @@ All notable changes to this project will be documented in this part.
 ### Fixed bugs 
 - Fixed program is stopped by deleting file not found
 - Final Report list WLs are updated images to Error list
+### Added
+- **--sq**/**--supper-quick** option
+- Recommended using for sync one WL with empty WL's images folder case
+- Should add more **--open** option to view ensure image synced then type WL's switching command line.
+    ```js
+    // implicit option
+    node sync -wl BANANA -sq -o
+    // explicit option
+    node sync -wl BANANA --supper-quick --open
+    ```
 ## [0.0.5]
 ### Fixed bugs 
 - Uppercase whitelabel name 
