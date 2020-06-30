@@ -26,11 +26,8 @@ let cfg = require('./switch.cfg'),
 	hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('313830')],
 	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 222
 
-
+/////////////////////////////////////////////////// UTIL FUNC ///////////////////////////////////////////////////
 function cleanEmptyFoldersRecursively(folder) {
-	var fs = require('fs');
-	var path = require('path');
-
 	var isDir = fs.statSync(folder).isDirectory();
 	if (!isDir) {
 		return;
@@ -89,6 +86,47 @@ function msToTime(duration, mode) {
 	}
 	return duration + ' miliseconds'
 }
+
+// stringSplit(Images,C:\\...)
+function formatPath(paths, stringSplit) {
+	let newPaths = []
+	for (let path of paths) {
+		let extension = getFileExtension(path)
+		if (extension !== 'db' && extension !== 'onetoc2' && extension !== path) {
+			path = path.substring(path.indexOf(stringSplit) + 6, path.length);
+			newPaths.push(path)
+		}
+	}
+	return newPaths
+}
+function filterFileList(fileList, stringSplit, whiteLabelName) {
+	let newFileList = []
+	for (let file of fileList) {
+		let fileName = file.fileName,
+			fileDateModified = file.fileDateModified,
+			extension = getFileExtension(fileName)
+		if (extension !== 'db' && extension !== 'onetoc2' && extension !== fileName) {
+			fileName = fileName.substring(fileName.indexOf(stringSplit) + stringSplit.length + 1, fileName.length)
+			if (whiteLabelName) {
+				let re = new RegExp('Images_' + whiteLabelName, 'i')
+				fileName = fileName.replace(re, 'Images')
+			}
+			newFileList.push({ fileName, fileDateModified })
+		}
+	}
+	//log(newFileList[0])
+	return newFileList
+}
+function getFileExtension(fullPath) {
+	return fullPath.split('.').pop()
+}
+function includeWww() {
+	return cfg.hasWww ? 'www.' : ''
+}
+function setHas3w(flag) {
+	cfg.hasWww = flag
+}
+///////////// ASYNC UTIL FUNC /////////////
 async function saveFile(fileName, content) {
 	return new Promise((resolve, reject) => {
 		fs.writeFile(fileName, content, function (err) {
@@ -149,41 +187,6 @@ async function getPaths(url) {
 		return []
 	}
 }
-/**
-* stringSplit(Images,C:\\...)
-*/
-function formatPath(paths, stringSplit) {
-	let newPaths = []
-	for (let path of paths) {
-		let extension = getFileExtension(path)
-		if (extension !== 'db' && extension !== 'onetoc2' && extension !== path) {
-			path = path.substring(path.indexOf(stringSplit) + 6, path.length);
-			newPaths.push(path)
-		}
-	}
-	return newPaths
-}
-function filterFileList(fileList, stringSplit, whiteLabelName) {
-	let newFileList = []
-	for (let file of fileList) {
-		let fileName = file.fileName,
-			fileDateModified = file.fileDateModified,
-			extension = getFileExtension(fileName)
-		if (extension !== 'db' && extension !== 'onetoc2' && extension !== fileName) {
-			fileName = fileName.substring(fileName.indexOf(stringSplit) + stringSplit.length + 1, fileName.length)
-			if (whiteLabelName) {
-				let re = new RegExp('Images_' + whiteLabelName, 'i')
-				fileName = fileName.replace(re, 'Images')
-			}
-			newFileList.push({ fileName, fileDateModified })
-		}
-	}
-	//log(newFileList[0])
-	return newFileList
-}
-function getFileExtension(fullPath) {
-	return fullPath.split('.').pop()
-}
 async function delay(ms) {
 	return new Promise(resolve => {
 		setTimeout(resolve, ms)
@@ -215,7 +218,6 @@ async function getDomain(whiteLabelName) {
 		log(error)
 	}
 }
-
 async function fetchTextFile(url) {
 	try {
 		return await rp({
@@ -267,7 +269,7 @@ async function fetchImage(url, fullFileName) {
 }
 /////////////////////// SYNC FILE USE RESCURISVE & NONE ASYNC/AWAIT ///////////////////////
 // => will open many connection and download many files at same time
-async function downloadOneFile(pathImage, host, syncFolder) {
+async function downloadFile(pathImage, host, syncFolder) {
 	//log('pathImage:%s', pathImage)
 	let url = cfg.protocol + host + '/' + pathImage,
 		rootFolderImages = cfg.rootFolderImages,
@@ -291,7 +293,7 @@ async function downloadOneFile(pathImage, host, syncFolder) {
 			default:
 				request(url)
 					.on('error', err => {
-						log('404 ==> fetchTextFile: %s', url)
+						log('404 ==> downloadFile: %s', url)
 						log(err)
 					})
 					//.on('response', response => log(response.statusCode))
@@ -306,23 +308,19 @@ async function downloadOneFile(pathImage, host, syncFolder) {
 }
 async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 	let currentPath = paths[indexPath]
-	if (isLog) log('paths[%s]=%s', indexPath, currentPath)
-	await downloadOneFile(currentPath, host, syncFolder)
+	if (!isVisibleLog) log('paths[%s]=%s', indexPath, currentPath)
+	downloadFile(currentPath, host, syncFolder)
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
-		setTimeout(async () => await downloadFiles(indexPath, paths, host, next, syncFolder), TIME_DELAY_EACH_DOWNLOADING_FILE)
+		setTimeout(() => downloadFiles(indexPath, paths, host, next, syncFolder), 10)
 	else {
 		log('Downloaded %s files to %s folder', paths.length, syncFolder)
 		next()
 	}
 }
-function includeWww() {
-	return cfg.hasWww ? 'www.' : ''
-}
-function setHas3w(flag) {
-	cfg.hasWww = flag
-}
-async function syncImagesOneWLQuickly(whiteLabelName) {
+
+// recommended using for sync one whitelabel need fastest syncing from live
+async function syncImagesOneWLSupperQuickly(whiteLabelName) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	log('Syncing %s', whiteLabelName)
 	let host = includeWww() + whiteLabelName + '.com',
@@ -333,12 +331,12 @@ async function syncImagesOneWLQuickly(whiteLabelName) {
 	paths = formatPath(paths, 'WebUI')
 	downloadFiles(0, paths, host, () => log('Synced Images of %s', whiteLabelName), syncFolder)
 }
-async function syncImagesWLsQuickly(index, whiteLabelNames, next) {
+async function syncImagesWLsSupperQuickly(index, whiteLabelNames, next) {
 	let currentWhiteLabelName = whiteLabelNames[index]
-	await syncImagesOneWLQuickly(currentWhiteLabelName)
+	await syncImagesOneWLSupperQuickly(currentWhiteLabelName)
 	index = index + 1
 	if (index < whiteLabelNames.length)
-		await syncImagesWLsQuickly(index, whiteLabelNames, next)
+		await syncImagesWLsSupperQuickly(index, whiteLabelNames, next)
 	else
 		next()
 }
@@ -427,6 +425,7 @@ async function findUpdatedImageFilesWL(whiteLabelName, index) {
 // => More safe in network slow case
 
 // skip file when error - need log a failed list url and download again
+// quick option
 async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 	try {
 		const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
@@ -485,6 +484,7 @@ async function downloadFilesSyncFor(imagePaths, host, syncFolder) {
 	}
 }
 // Alway download 
+// safe option
 async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 	try {
 		log('\nSyncing %s from %s', syncFolder, host)
@@ -630,7 +630,7 @@ async function saveImage(pathImage, host) {
 			break;
 	}
 }
-async function saveImages(i, paths, host, next) {
+function saveImages(i, paths, host, next) {
 	let path = paths[i];
 	log('paths[%s]=%s', i, path);
 	this.saveImage(path, host);
@@ -648,6 +648,7 @@ function toVer(v) {
 	let ver = v.toString()
 	return `${v < 10 ? '0.0.' + v : ver < 100 ? '0.' + ver[0] + '.' + ver[1] : ver[0] + '.' + ver[1] + '.' + ver[2]}`
 }
+
 module.exports = {
 	getPaths: getPaths,
 	formatPath: formatPath,
@@ -656,8 +657,8 @@ module.exports = {
 	//downloadFilesSyncFor: downloadFilesSyncFor,
 	getSwitchCfg: getSwitchCfg,
 	getDHNumber: getDHNumber,
-	//syncImagesWL: syncImagesWL,
-	syncImagesWLsQuickly: syncImagesWLsQuickly,
+	syncImagesOneWLSupperQuickly: syncImagesOneWLSupperQuickly,
+	syncImagesWLsSupperQuickly: syncImagesWLsSupperQuickly,
 	syncImagesOneWLSafely: syncImagesOneWLSafely,
 	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
@@ -682,10 +683,11 @@ module.exports = {
 		isSyncWholeFolder = false,
 		fromIndex = 0
 	program
-		.version(toVer(nod) + '4')
+		.version(toVer(nod) + '6')
 		.option('-d, --debug', 'output extra debugging')
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
+		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
 		.option('-w3w, --without-www', 'sync with without www url')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
@@ -694,6 +696,7 @@ module.exports = {
 		.option('-ex, --example', `show example cli`
 		)
 	//.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
+	//sync.syncImagesOneWLSupperQuickly('BOLACAMAR')
 	program.parse(process.argv);
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
@@ -729,7 +732,10 @@ module.exports = {
 					if (program.open)
 						require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
 					let whiteLabelName = whiteLabelNameList[0]
-					sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload })
+					if(program.supperQuick)
+						sync.syncImagesOneWLSupperQuickly(whiteLabelName)
+					else
+						sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload })
 				}
 				else
 					sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload)
