@@ -331,15 +331,16 @@ async function syncImagesOneWLSupperQuickly(whiteLabelName) {
 	paths = formatPath(paths, 'WebUI')
 	downloadFiles(0, paths, host, () => log('Synced Images of %s', whiteLabelName), syncFolder)
 }
-async function syncImagesWLsSupperQuickly(index, whiteLabelNames, next) {
-	let currentWhiteLabelName = whiteLabelNames[index]
-	await syncImagesOneWLSupperQuickly(currentWhiteLabelName)
-	index = index + 1
-	if (index < whiteLabelNames.length)
-		await syncImagesWLsSupperQuickly(index, whiteLabelNames, next)
-	else
-		next()
-}
+// not recommended
+// async function syncImagesWLsSupperQuickly(index, whiteLabelNames, next) {
+// 	let currentWhiteLabelName = whiteLabelNames[index]
+// 	await syncImagesOneWLSupperQuickly(currentWhiteLabelName)
+// 	index = index + 1
+// 	if (index < whiteLabelNames.length)
+// 		await syncImagesWLsSupperQuickly(index, whiteLabelNames, next)
+// 	else
+// 		next()
+// }
 
 function getFileInList(fileName, fileList) {
 	for (let i = 0; i < fileList.length; i++)
@@ -596,6 +597,7 @@ async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIn
 		index = index + 1
 	}
 	log('===================== Final Report =====================')
+	finalReport.success = ['...']
 	log(finalReport)
 }
 /////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
@@ -658,7 +660,7 @@ module.exports = {
 	getSwitchCfg: getSwitchCfg,
 	getDHNumber: getDHNumber,
 	syncImagesOneWLSupperQuickly: syncImagesOneWLSupperQuickly,
-	syncImagesWLsSupperQuickly: syncImagesWLsSupperQuickly,
+	//syncImagesWLsSupperQuickly: syncImagesWLsSupperQuickly,
 	syncImagesOneWLSafely: syncImagesOneWLSafely,
 	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
@@ -691,6 +693,7 @@ module.exports = {
 		.option('-w3w, --without-www', 'sync with without www url')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
+		.option('-awls, --all-whitelabels', 'sync all white labels in list')
 		.option('-f, --from <index>', 'sync from index of WL list')
 		.option('-o, --open', 'open WL\'s Images folder')
 		.option('-ex, --example', `show example cli`
@@ -732,12 +735,20 @@ module.exports = {
 					if (program.open)
 						require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
 					let whiteLabelName = whiteLabelNameList[0]
-					if(program.supperQuick)
+					if (program.supperQuick)
 						sync.syncImagesOneWLSupperQuickly(whiteLabelName)
 					else
 						sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload })
 				}
 				else
 					sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload)
+			}
+			else if (program.allWhitelabels) {
+				let data = await sync.getSwitchCfg(),
+					whiteLabelListWithoutWww = data.Clients.ACTIVE_WLS.w3w.split(','),
+					whiteLabelListWithWww = data.Clients.ACTIVE_WLS.www.split(',')
+				await sync.syncImagesWLsSafely(whiteLabelListWithWww)
+				sync.setHas3w(false)
+				await sync.syncImagesWLsSafely(whiteLabelListWithoutWww)
 			}
 }())
