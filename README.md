@@ -51,6 +51,18 @@ All notable changes to this project will be documented in this part.
 
 # Swith command 
     - Wait 15s to copy image
+    
+## [0.0.7]
+### Added
+- **-awls**/**--all-whitelabels** option
+- Sync all WLs in active WL list from WLs.json (included w3w & www)
+- Should add more **--open** option to view ensure image synced then type WL's switching command line.
+    ```js
+    // implicit option
+    node sync -awls
+    // explicit option
+    node sync --all-whitelabels
+    ```
 
 ## [0.0.6]
 ### Fixed bugs 
