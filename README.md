@@ -22,13 +22,14 @@
     -awls, --all-whitelabels  sync all Images in WL list
     -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
        - Sub options of -wl <name>:
-            -s, --safe                sync latest Images slowly and safely
-            -q, --quick               sync latest Images quickly
-            -sq, --supper-quick       sync latest Images supper quickly (Recommeded using for one WL)
-            -h3w, --has-www           sync with www url
-            -a, --all                 sync all Images
-            -f, --from <index>        sync from index of WL list
-            -o, --open                open WL's Images folder
+            -s, --safe           sync latest Images slowly and safely
+            -q, --quick          sync latest Images quickly
+            -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
+            -h3w, --has-www      sync with www url
+            -http, --http',      sync with http protocol
+            -a, --all            sync all Images
+            -f, --from <index>   sync from index of WL list
+            -o, --open           open WL's Images folder
         
     
 # Sample statements
@@ -69,7 +70,7 @@ All notable changes to this project will be documented in this part.
     node sync --all-whitelabels
     ```
 - **-h3w**/**--has-www** option : sync with www url'
-
+- **-http/--http** option : sync with http protocol
 ### Changed
 - **hasWww = false** is default,
 

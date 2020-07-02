@@ -591,7 +591,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 }
 async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
-	let index = 0, finalReport = {total:whiteLabelNameList.length, latest: [], changed: [], error: [] }
+	let index = 0, finalReport = { total: whiteLabelNameList.length, latest: [], changed: [], error: [] }
 	if (!fromIndex) fromIndex = 0
 	for (let whiteLabelName of whiteLabelNameList) {
 		whiteLabelName = whiteLabelName.toUpperCase()
@@ -674,6 +674,7 @@ module.exports = {
 	syncImagesWLsSafely: syncImagesWLsSafely,
 	getDomain: getDomain,
 	setHas3w: setHas3w,
+	setProtocol: setProtocol,
 	cfg: cfg,
 	//fetchImage: fetchImage,
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
@@ -699,7 +700,8 @@ module.exports = {
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
 		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
-		.option('-h3w, --has-www', 'sync with with www url')
+		.option('-h3w, --has-www', 'sync with www url')
+		.option('-http, --http', 'sync with http protocol')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-awls, --all-whitelabels', 'sync all white labels in list')
@@ -733,6 +735,8 @@ module.exports = {
 			if (program.whitelabel) {
 				if (program.hasWww)
 					sync.setHas3w(true)
+				if (program.http)
+					sync.setProtocol('http://')
 				if (program.safe)
 					isQuickDownload = false
 				if (program.all)
