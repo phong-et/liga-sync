@@ -1,12 +1,13 @@
 let cfg = require('./switch.cfg'),
+	isActivedCF = false,
 	log = console.log,
 	shell = require('shelljs'),
-	rp = require('request-promise'),
 	request = require('request'),
+	rp = isActivedCF ? require('cloudscraper') : require('request-promise'),
 	fs = require('fs'),
 	path = require('path'),
 	userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36',
-	contentType = 'text/html',
+	contentType = 'application/json',
 	headers = {
 		'User-Agent': userAgent,
 		'Content-type': contentType
@@ -187,6 +188,7 @@ async function getPaths(url) {
 			log(cliColor.red('======> [404] Page not found'), error.options.uri)
 		else if (error.message.indexOf('ECONNREFUSED') > -1)
 			log(cliColor.red('======> [ECONNREFUSED] Domain has\'t not actived yet '), error.message)
+		//log(error)
 		return []
 	}
 }
@@ -695,20 +697,19 @@ module.exports = {
 		isSyncWholeFolder = false,
 		fromIndex = 0
 	program
-		.version(toVer(nod) + '6')
+		.version(toVer(nod) + '7')
 		.option('-d, --debug', 'output extra debugging')
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
 		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
-		.option('-h3w, --has-www', 'sync with www url')
+		.option('-www, --www', 'sync with www url')
 		.option('-http, --http', 'sync with http protocol')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-awls, --all-whitelabels', 'sync all white labels in list')
 		.option('-f, --from <index>', 'sync from index of WL list')
 		.option('-o, --open', 'open WL\'s Images folder')
-		.option('-ex, --example', `show example cli`
-		)
+		.option('-ex, --example', `show example cli`)
 	//.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
 	//sync.syncImagesOneWLSupperQuickly('BOLACAMAR')
 	program.parse(process.argv);
@@ -733,7 +734,7 @@ module.exports = {
 			)
 		else
 			if (program.whitelabel) {
-				if (program.hasWww)
+				if (program.www)
 					sync.setHas3w(true)
 				if (program.http)
 					sync.setProtocol('http://')

@@ -25,7 +25,7 @@
             -s, --safe           sync latest Images slowly and safely
             -q, --quick          sync latest Images quickly
             -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
-            -h3w, --has-www      sync with www url
+            -www, --www          sync with www url
             -http, --http',      sync with http protocol
             -a, --all            sync all Images
             -f, --from <index>   sync from index of WL list
@@ -43,7 +43,7 @@ node sync -wl HANAHA,HAHAHA,HABANA,BANANA
 // sync WL list from index(start syncing from HABANA)
 node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
 
-// sync image from domain without www and open folder
+// sync image from domain include www and open folder
 node sync -wl BANANA -w3w -o 
 
 ```
@@ -69,10 +69,10 @@ All notable changes to this project will be documented in this part.
     // explicit option
     node sync --all-whitelabels
     ```
-- **-h3w**/**--has-www** option : sync with www url'
+- **-www**/**--www** option : sync with www url'
 - **-http/--http** option : sync with http protocol
 ### Changed
-- **hasWww = false** is default,
+- **hasWww = false** is default
 
 ## [0.0.6]
 ### Fixed bugs 
