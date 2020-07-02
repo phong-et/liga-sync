@@ -14,18 +14,24 @@
 7. http://prntscr.com/sk3de31 Sometimes files are missed out. Sometime, the servers don't sync together latest file
 8. http://prntscr.com/srhj101 Sync Images with index of WL list
 9. http://prntscr.com/su3l701 ".download" file type don't define at MINETYPE IIS -> download failed
+10. http://prntscr.com/ta65bx1 latest final report 
 # CLI arguments
     -V, --version             output the version number
     -d, --debug               output extra debugging
-    -s, --safe                sync latest Images slowly and safely
-    -q, --quick               sync latest Images quickly
-    -w3w, --without-www       sync with without www url
-    -a, --all                 sync all Images
-    -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
-    -f, --from <index>        sync from index of WL list
-    -o, --open                open WL's Images folder
     -h, --help                display help for command  
-
+    -awls, --all-whitelabels  sync all Images in WL list
+    -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
+       - Sub options of -wl <name>:
+            -s, --safe           sync latest Images slowly and safely
+            -q, --quick          sync latest Images quickly
+            -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
+            -www, --www          sync with www url
+            -http, --http',      sync with http protocol
+            -a, --all            sync all Images
+            -f, --from <index>   sync from index of WL list
+            -o, --open           open WL's Images folder
+        
+    
 # Sample statements
 ```js
 // sync one WL name
@@ -37,7 +43,7 @@ node sync -wl HANAHA,HAHAHA,HABANA,BANANA
 // sync WL list from index(start syncing from HABANA)
 node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
 
-// sync image from domain without www and open folder
+// sync image from domain include www and open folder
 node sync -wl BANANA -w3w -o 
 
 ```
@@ -51,6 +57,22 @@ All notable changes to this project will be documented in this part.
 
 # Swith command 
     - Wait 15s to copy image
+    
+## [0.0.7]
+### Added
+- **-awls**/**--all-whitelabels** option
+- Sync all WLs in active WL list from WLs.json (included w3w & www)
+- Should add more **--open** option to view ensure image synced then type WL's switching command line.
+    ```js
+    // implicit option
+    node sync -awls
+    // explicit option
+    node sync --all-whitelabels
+    ```
+- **-www**/**--www** option : sync with www url'
+- **-http/--http** option : sync with http protocol
+### Changed
+- **hasWww = false** is default
 
 ## [0.0.6]
 ### Fixed bugs 
