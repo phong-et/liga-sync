@@ -3,6 +3,7 @@
 # Bugs 
 1. http://prntscr.com/sjax7c (process bar break down)
 2. Download file list by while loop, looping can not end with server without any file ???
+3. By adding try catch, program will be stopped although return statement called why ?
 
 # CLI screen results
 1. http://prntscr.com/sjdxpv1 (hasn't log = 0 seconds)
@@ -10,11 +11,12 @@
 3. http://prntscr.com/sjg85f1 list final
 4. https://prnt.sc/sjh10c1 Synced latest files
 5. http://prntscr.com/sjhq7e1 Done aync multi WL
-6. http://prntscr.com/sjldl41 Deleted files after Synced
+6. http://prntscr.com/sjldl41 Deleted files after synced
 7. http://prntscr.com/sk3de31 Sometimes files are missed out. Sometime, the servers don't sync together latest file
 8. http://prntscr.com/srhj101 Sync Images with index of WL list
 9. http://prntscr.com/su3l701 ".download" file type don't define at MINETYPE IIS -> download failed
 10. http://prntscr.com/ta65bx1 latest final report 
+
 # CLI arguments
     -V, --version             output the version number
     -d, --debug               output extra debugging
@@ -23,7 +25,7 @@
     -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
        - Sub options of -wl <name>:
             -s, --safe           sync latest Images slowly and safely
-            -q, --quick          sync latest Images quickly
+            -q, --quick          sync latest Images quickly(is default)
             -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
             -www, --www          sync with www url
             -http, --http',      sync with http protocol
@@ -44,7 +46,10 @@ node sync -wl HANAHA,HAHAHA,HABANA,BANANA
 node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
 
 // sync image from domain include www and open folder
-node sync -wl BANANA -w3w -o 
+node sync -wl BANANA -www -o 
+
+// sync image by url: http://www. + domain supper quickly then open folder Image too
+node sync -wl BANANA -www -http -sp -o 
 
 ```
 # Knowledge
@@ -55,11 +60,17 @@ node sync -wl BANANA -w3w -o
 # Change log
 All notable changes to this project will be documented in this part.
 
-# Swith command 
-    - Wait 15s to copy image
-    
 ## [0.0.7]
 ### Added
+- Final Report 
+    ```js 
+    {
+        total: 7,
+        latest: [ '5 White Labels' ],
+        changed: ['BANANA'],
+        error: [ 'HABANA' ] 
+    }
+    ```
 - **-awls**/**--all-whitelabels** option
 - Sync all WLs in active WL list from WLs.json (included w3w & www)
 - Should add more **--open** option to view ensure image synced then type WL's switching command line.
