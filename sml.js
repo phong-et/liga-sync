@@ -126,6 +126,9 @@ function includeWww() {
 function setHas3w(flag) {
 	cfg.hasWww = flag
 }
+function setProtocol(protocol) {
+	cfg.protocol = protocol
+}
 ///////////// ASYNC UTIL FUNC /////////////
 async function saveFile(fileName, content) {
 	return new Promise((resolve, reject) => {
@@ -537,9 +540,12 @@ async function downloadFilesSyncWhile(imagePaths, host, syncFolder) {
 		writeLog(`${new Date().toLocaleString('vi-VN')}: downloadFilesSync ${error}`)
 	}
 }
+/**
+ * return a status :{ 1: latest, 2: changed, 3 : error}
+ */
 async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, cliDomain, isQuickDownload }) {
 	whiteLabelName = whiteLabelName.toUpperCase().trim()
-	let status = true
+	let status = 1
 	if (await getDHNumber(whiteLabelName) === undefined) {
 		log('White label %s don\'t exist', whiteLabelName)
 		return
@@ -562,18 +568,20 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index)
 		if (fileList.length === 0) {
 			log(cliColor.red('X Has some errors !'))
-			status = false
+			status = 3
 		}
 		else {
 			log(fileList)
 			paths = [...fileList.newFiles, ...fileList.updatedFiles]
 			if (fileList.deletedFiles && fileList.deletedFiles.length > 0)
 				deleteFiles(fileList.deletedFiles, whiteLabelName)
-			if (paths.length > 0)
+			if (paths.length > 0) {
+				status = 2
 				if (isQuickDownload)
 					await downloadFilesSyncFor(paths, host, syncFolder)
 				else
 					await downloadFilesSyncWhile(paths, host, syncFolder)
+			}
 			else
 				log(cliColor.green('√ All files are latest'))
 		}
@@ -583,21 +591,22 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 }
 async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
-	let index = 0, finalReport = { error: [], success: [] }
+	let index = 0, finalReport = {total:whiteLabelNameList.length, latest: [], changed: [], error: [] }
 	if (!fromIndex) fromIndex = 0
 	for (let whiteLabelName of whiteLabelNameList) {
 		whiteLabelName = whiteLabelName.toUpperCase()
 		if (index >= fromIndex) {
 			let isSuccessSync = await syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index, isQuickDownload })
-			if (isSuccessSync)
-				finalReport.success.push(whiteLabelName)
-			else
-				finalReport.error.push(whiteLabelName)
+			switch (isSuccessSync) {
+				case 1: finalReport.latest.push(whiteLabelName); break
+				case 2: finalReport.changed.push(whiteLabelName); break
+				case 3: finalReport.error.push(whiteLabelName); break
+			}
 		}
 		index = index + 1
 	}
 	log('===================== Final Report =====================')
-	finalReport.success = ['...']
+	finalReport.latest = [finalReport.latest.length + ' White Labels']
 	log(finalReport)
 }
 /////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
@@ -690,7 +699,7 @@ module.exports = {
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
 		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
-		.option('-w3w, --without-www', 'sync with without www url')
+		.option('-h3w, --has-www', 'sync with with www url')
 		.option('-a, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-awls, --all-whitelabels', 'sync all white labels in list')
@@ -722,8 +731,8 @@ module.exports = {
 			)
 		else
 			if (program.whitelabel) {
-				if (program.withoutWww)
-					sync.setHas3w(false)
+				if (program.hasWww)
+					sync.setHas3w(true)
 				if (program.safe)
 					isQuickDownload = false
 				if (program.all)
@@ -745,10 +754,7 @@ module.exports = {
 			}
 			else if (program.allWhitelabels) {
 				let data = await sync.getSwitchCfg(),
-					whiteLabelListWithoutWww = data.Clients.ACTIVE_WLS.w3w.split(','),
-					whiteLabelListWithWww = data.Clients.ACTIVE_WLS.www.split(',')
-				await sync.syncImagesWLsSafely(whiteLabelListWithWww)
-				sync.setHas3w(false)
+					whiteLabelListWithoutWww = data.Clients.ACTIVE_WLS.w3w.split(',')
 				await sync.syncImagesWLsSafely(whiteLabelListWithoutWww)
 			}
 }())
