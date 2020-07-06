@@ -21,7 +21,7 @@
     -V, --version             output the version number
     -d, --debug               output extra debugging
     -h, --help                display help for command  
-    -awls, --all-whitelabels  sync all Images in WL list
+    -allwls, --all-whitelabels  sync all Images in WL list
     -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
        - Sub options of -wl <name>:
             -s, --safe           sync latest Images slowly and safely
@@ -29,9 +29,11 @@
             -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
             -www, --www          sync with www url
             -http, --http',      sync with http protocol
-            -a, --all            sync all Images
+            -all, --all          sync all Images
             -f, --from <index>   sync from index of WL list
             -o, --open           open WL's Images folder
+            -log, --log          show log info
+            -url, --url          sync with specific domain (only using for one WL and must use with -all together)
         
     
 # Sample statements
@@ -60,7 +62,7 @@ node sync -wl BANANA -www -http -sp -o
 # Note 
 Sync command line of test site 
 ```js
-node sml -wl BANANA -url bananamain.playplay.com -http -a
+node sml -wl BANANA -url bananamain.playplay.com -http -all
 ```
 
 # Change log
