@@ -57,8 +57,29 @@ node sync -wl BANANA -www -http -sp -o
     - https://gist.github.com/jakub-g/5903dc7e4028133704a4 normal
     - https://gist.github.com/fixpunkt/fe32afe14fbab99d9feb4e8da7268445 promise
 
+# Note 
+Sync command line of test site 
+```js
+node sml -wl BANANA -url bananamain.playplay.com -http -a
+```
+
 # Change log
 All notable changes to this project will be documented in this part.
+## [0.0.8]
+### Fixed
+- sync all white labels list can be use -f option together
+  ```js
+  // start sycing from white lable has index is 15
+  node sync -awls -f 15
+
+  ```
+- **-log** option (don't show log when add -log)
+
+### Added
+- **-url**/**--url** option : sync with specific url, only use for one white label
+- **-log**/**--log** option : enable log console
+### Changed
+- **awls** to **allwls**
 
 ## [0.0.7]
 ### Added
@@ -120,7 +141,7 @@ All notable changes to this project will be documented in this part.
 - **--quick** option 
 - Final Report
 ### Changed
-- **quick** is default sync, disable quick by add -s/--safe
+- **quick** is default sync, disable quick mode by add -s/--safe
 
 ## 0.0.1 - 2020-6-1
  - 1st release

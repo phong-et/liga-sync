@@ -20,7 +20,7 @@ let cfg = require('./switch.cfg'),
 	syncPage = '/pgajax.axd?T=SyncImages',
 	localPage = 'pgajax.axd?T=GetWLImages&name=',
 	livePage = '/pgajax.axd?T=GetImages',
-	isVisibleLog = cfg.isVisibleLog,
+	isVisibleLog = cfg.isVisibleLog || false,
 	cliProgress = require('cli-progress'),
 	cliColor = require('cli-color'),
 	dd = { ids: function (d1, d2) { let t2 = d2.getTime(), t1 = d1.getTime(); return parseInt((t2 - t1) / (24 * 3600 * 1000)) } },
@@ -129,6 +129,9 @@ function setHas3w(flag) {
 }
 function setProtocol(protocol) {
 	cfg.protocol = protocol
+}
+function setIsVisibleLog(status) {
+	isVisibleLog = status
 }
 ///////////// ASYNC UTIL FUNC /////////////
 async function saveFile(fileName, content) {
@@ -325,12 +328,13 @@ async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 }
 
 // recommended using for sync one whitelabel need fastest syncing from live
-async function syncImagesOneWLSupperQuickly(whiteLabelName) {
+async function syncImagesOneWLSupperQuickly({ whiteLabelName, cliDomain }) {
 	whiteLabelName = whiteLabelName.toUpperCase()
 	log('Syncing %s', whiteLabelName)
-	let host = includeWww() + whiteLabelName + '.com',
-		syncFolder = 'Images_' + whiteLabelName,
+	let domain = cliDomain ? cliDomain : await getDomain(whiteLabelName),
 		protocol = cfg.protocol,
+		host = includeWww() + (domain ? domain : whiteLabelName + '.com'),
+		syncFolder = 'Images_' + whiteLabelName,
 		url = protocol + host + syncPage,
 		paths = await getPaths(url)
 	paths = formatPath(paths, 'WebUI')
@@ -591,7 +595,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 	cleanEmptyFoldersRecursively(cfg.rootFolderImages + 'Images_WLs\\' + syncFolder)
 	return status
 }
-async function syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload) {
+async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload }) {
 	if (whiteLabelNameList.length > 1) log('White Labels count: %s', whiteLabelNameList.length)
 	let index = 0, finalReport = { total: whiteLabelNameList.length, latest: [], changed: [], error: [] }
 	if (!fromIndex) fromIndex = 0
@@ -677,6 +681,7 @@ module.exports = {
 	getDomain: getDomain,
 	setHas3w: setHas3w,
 	setProtocol: setProtocol,
+	setIsVisibleLog: setIsVisibleLog,
 	cfg: cfg,
 	//fetchImage: fetchImage,
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
@@ -704,62 +709,48 @@ module.exports = {
 		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
 		.option('-www, --www', 'sync with www url')
 		.option('-http, --http', 'sync with http protocol')
-		.option('-a, --all', 'sync all Images')
+		.option('-all, --all', 'sync all Images')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
-		.option('-awls, --all-whitelabels', 'sync all white labels in list')
+		.option('-allwls, --all-whitelabels', 'sync all white labels in list')
 		.option('-f, --from <index>', 'sync from index of WL list')
 		.option('-o, --open', 'open WL\'s Images folder')
-		.option('-ex, --example', `show example cli`)
-	//.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
-	//sync.syncImagesOneWLSupperQuickly('BOLACAMAR')
+		.option('-url, --url <url>', 'spectify WL\'s url to sync Images')
+		.option('-log, --log', 'enable log mode')
 	program.parse(process.argv);
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
-		if (program.example)
-			log(`
-			==========================================
-			// sync one WL name
-			node sync -wl HANAHA
-
-			//sync WL list
-			node sync -wl HANAHA,HAHAHA,HABANA,BANANA
-
-			// sync WL list from index(start syncing from HABANA)
-			node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
-
-			// sync image from domain without www and open folder
-			node sync -wl BANANA -w3w -o
-			============================================
-			`
-			)
-		else
-			if (program.whitelabel) {
-				if (program.www)
-					sync.setHas3w(true)
-				if (program.http)
-					sync.setProtocol('http://')
-				if (program.safe)
-					isQuickDownload = false
-				if (program.all)
-					isSyncWholeFolder = true
-				let whiteLabelNameList = program.whitelabel.split(',')
-				if (whiteLabelNameList.length > 1)
-					fromIndex = program.from
-				if (whiteLabelNameList.length === 1) {
-					if (program.open)
-						require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
-					let whiteLabelName = whiteLabelNameList[0]
-					if (program.supperQuick)
-						sync.syncImagesOneWLSupperQuickly(whiteLabelName)
-					else
-						sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload })
-				}
+		if (program.whitelabel) {
+			if (program.log)
+				sync.setIsVisibleLog(true)
+			log('isVisibleLog: %s', isVisibleLog)
+			if (program.www)
+				sync.setHas3w(true)
+			if (program.http)
+				sync.setProtocol('http://')
+			if (program.safe)
+				isQuickDownload = false
+			if (program.all)
+				isSyncWholeFolder = true
+			let whiteLabelNameList = program.whitelabel.split(',')
+			if (whiteLabelNameList.length > 1)
+				fromIndex = program.from
+			if (whiteLabelNameList.length === 1) {
+				let whiteLabelName = whiteLabelNameList[0], cliDomain = program.url
+				if (program.supperQuick)
+					await sync.syncImagesOneWLSupperQuickly({ whiteLabelName, cliDomain })
 				else
-					sync.syncImagesWLsSafely(whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload)
+					await sync.syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, isQuickDownload, cliDomain })
+				if (program.open)
+					require('child_process').exec('start \"\" \"' + sync.cfg.rootPath + '/Images_WLs/Images_' + whiteLabelNameList[0] + '\"')
 			}
-			else if (program.allWhitelabels) {
-				let data = await sync.getSwitchCfg(),
-					whiteLabelListWithoutWww = data.Clients.ACTIVE_WLS.w3w.split(',')
-				await sync.syncImagesWLsSafely(whiteLabelListWithoutWww)
-			}
+			else
+				sync.syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload })
+		}
+		else if (program.allWhitelabels) {
+			let data = await sync.getSwitchCfg(),
+				whiteLabelNameList = data.Clients.ACTIVE_WLS.w3w.split(','),
+				fromIndex = program.from
+			//log(whiteLabelNameList)
+			await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex })
+		}
 }())
