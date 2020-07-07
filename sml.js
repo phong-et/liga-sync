@@ -226,6 +226,15 @@ async function getDomain(whiteLabelName) {
 		log(error)
 	}
 }
+async function getActiveWhiteLabel() {
+	let result = await getSwitchCfg(),
+		whiteLabelList = result['Clients'],
+		activeWhiteLabels = []
+	for (let whiteLabel in whiteLabelList)
+		if (!whiteLabelList[whiteLabel]['status'])
+			activeWhiteLabels.push(whiteLabel)
+	return activeWhiteLabels
+}
 async function fetchTextFile(url) {
 	try {
 		return await rp({
@@ -316,7 +325,7 @@ async function downloadFile(pathImage, host, syncFolder) {
 }
 async function downloadFiles(indexPath, paths, host, next, syncFolder) {
 	let currentPath = paths[indexPath]
-	if (!isVisibleLog) log('paths[%s]=%s', indexPath, currentPath)
+	if (isVisibleLog) log('paths[%s]=%s', indexPath, currentPath)
 	downloadFile(currentPath, host, syncFolder)
 	indexPath = indexPath + 1
 	if (indexPath < paths.length)
@@ -687,7 +696,8 @@ module.exports = {
 	//fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
 	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
-	saveFile: saveFile
+	saveFile: saveFile,
+	getActiveWhiteLabel: getActiveWhiteLabel
 };
 
 (async function () {
@@ -716,13 +726,14 @@ module.exports = {
 		.option('-o, --open', 'open WL\'s Images folder')
 		.option('-url, --url <url>', 'spectify WL\'s url to sync Images')
 		.option('-log, --log', 'enable log mode')
+		.option('-t, --test', 'sync Image from test site')
 	program.parse(process.argv);
+	await sync.getActiveWhiteLabel()
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
 		if (program.whitelabel) {
 			if (program.log)
 				sync.setIsVisibleLog(true)
-			log('isVisibleLog: %s', isVisibleLog)
 			if (program.www)
 				sync.setHas3w(true)
 			if (program.http)
@@ -736,6 +747,11 @@ module.exports = {
 				fromIndex = program.from
 			if (whiteLabelNameList.length === 1) {
 				let whiteLabelName = whiteLabelNameList[0], cliDomain = program.url
+				if (program.test) {
+					cliDomain = whiteLabelName + "main.playliga.com"
+					sync.setProtocol('http://')
+					isSyncWholeFolder = true
+				}
 				if (program.supperQuick)
 					await sync.syncImagesOneWLSupperQuickly({ whiteLabelName, cliDomain })
 				else
@@ -747,8 +763,7 @@ module.exports = {
 				sync.syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, fromIndex, isQuickDownload })
 		}
 		else if (program.allWhitelabels) {
-			let data = await sync.getSwitchCfg(),
-				whiteLabelNameList = data.Clients.ACTIVE_WLS.w3w.split(','),
+			let whiteLabelNameList = await sync.getActiveWhiteLabel(),
 				fromIndex = program.from
 			//log(whiteLabelNameList)
 			await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex })

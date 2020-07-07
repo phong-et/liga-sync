@@ -63,6 +63,10 @@ node sync -wl BANANA -www -http -sp -o
 Sync command line of test site 
 ```js
 node sml -wl BANANA -url bananamain.playplay.com -http -all
+// or
+node sml -wl BANANA -t
+// or
+node sml -wl BANANA --test --log --supper-quick
 ```
 
 # Change log
@@ -73,13 +77,13 @@ All notable changes to this project will be documented in this part.
   ```js
   // start sycing from white lable has index is 15
   node sync -awls -f 15
-
   ```
-- **-log** option (don't show log when add -log)
+- get active white labels in json data not plain text
 
 ### Added
 - **-url**/**--url** option : sync with specific url, only use for one white label
 - **-log**/**--log** option : enable log console
+- **-t**/**--test** option : sync image from test site
 ### Changed
 - **awls** to **allwls**
 
