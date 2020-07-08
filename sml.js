@@ -701,7 +701,7 @@ module.exports = {
 };
 
 (async function () {
-	const { program } = require('commander'),
+	const { program, option } = require('commander'),
 		sync = require('./sml'),
 		log = console.log,
 		yN = +h2a(hW[2]) * 100 + +h2a(hW[2]),
@@ -712,21 +712,40 @@ module.exports = {
 		isSyncWholeFolder = false,
 		fromIndex = 0
 	program
-		.version(toVer(nod) + '7')
+		//.version(toVer(nod) + '7')
+		.version('0.0.8r' + nod, '-v, --vers', 'output the current version')
 		.option('-d, --debug', 'output extra debugging')
 		.option('-s, --safe', 'sync latest Images slowly and safely')
 		.option('-q, --quick', 'sync latest Images quickly')
 		.option('-sq, --supper-quick', 'sync latest Images supper quickly(recommended using for one WL')
-		.option('-www, --www', 'sync with www url')
+		.option('-w, --www', 'sync with www url')
 		.option('-http, --http', 'sync with http protocol')
-		.option('-all, --all', 'sync all Images')
+		.option('-a, --all', 'sync all Images folder')
 		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-allwls, --all-whitelabels', 'sync all white labels in list')
 		.option('-f, --from <index>', 'sync from index of WL list')
 		.option('-o, --open', 'open WL\'s Images folder')
-		.option('-url, --url <url>', 'spectify WL\'s url to sync Images')
-		.option('-log, --log', 'enable log mode')
+		.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
+		.option('-l, --log', 'enable log mode')
 		.option('-t, --test', 'sync Image from test site')
+
+	program
+		.command('all-whitelabels')
+		.alias('all')
+		.description('sync Images of all whitelabels')
+		//.option("-f, --from <index>", "Sync from index number of whitelabels list")
+		.action(async (_, options) => {
+			log(options)
+			log(_)
+			let whiteLabelNameList = await sync.getActiveWhiteLabel(),
+				fromIndex = options ? options.from : 0
+			await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex })
+		}).on('--help', function () {
+			log('');
+			log('Examples:');
+			log('  $ sync all');
+			log('  $ sync all -f 12');
+		})
 	program.parse(process.argv);
 	await sync.getActiveWhiteLabel()
 	if (program.debug) console.log(program.opts())
@@ -765,7 +784,6 @@ module.exports = {
 		else if (program.allWhitelabels) {
 			let whiteLabelNameList = await sync.getActiveWhiteLabel(),
 				fromIndex = program.from
-			//log(whiteLabelNameList)
 			await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex })
 		}
 }())

@@ -27,15 +27,28 @@
             -s, --safe           sync latest Images slowly and safely
             -q, --quick          sync latest Images quickly(is default)
             -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
-            -www, --www          sync with www url
+            -w, --www            sync with www url
             -http, --http',      sync with http protocol
-            -all, --all          sync all Images
+            -a, --all            sync all Images folder
             -f, --from <index>   sync from index of WL list
             -o, --open           open WL's Images folder
-            -log, --log          show log info
+            -l, --log            show log info
             -url, --url          sync with specific domain (only using for one WL and must use with -all together)
-        
-    
+            -t, --test           sync Image from test site
+ # CLI command
+   - all / all-whitelabels 
+      - **Options** :
+        - -f, --from
+      - **Example** :
+
+        ```js
+        // sync all white label list
+        sync all
+        // or
+        sync all-whitelabels
+        // sync all whitelabel from index
+        sync all -f 12
+        ```
 # Sample statements
 ```js
 // sync one WL name
@@ -48,10 +61,10 @@ node sync -wl HANAHA,HAHAHA,HABANA,BANANA
 node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
 
 // sync image from domain include www and open folder
-node sync -wl BANANA -www -o 
+node sync -wl BANANA -w -o 
 
 // sync image by url: http://www. + domain supper quickly then open folder Image too
-node sync -wl BANANA -www -http -sp -o 
+node sync -wl BANANA -w -http -sp -o 
 
 ```
 # Knowledge
@@ -62,7 +75,7 @@ node sync -wl BANANA -www -http -sp -o
 # Note 
 Sync command line of test site 
 ```js
-node sml -wl BANANA -url bananamain.playplay.com -http -all
+node sml -wl BANANA -u bananamain.playplay.com -http -a
 // or
 node sml -wl BANANA -t
 // or
@@ -71,7 +84,7 @@ node sml -wl BANANA --test --log --supper-quick
 
 # Change log
 All notable changes to this project will be documented in this part.
-## [0.0.8]
+## [0.0.8r37]
 ### Fixed
 - sync all white labels list can be use -f option together
   ```js
@@ -79,17 +92,23 @@ All notable changes to this project will be documented in this part.
   node sync -awls -f 15
   ```
 - get active white labels in json data not plain text
+- ~~show error message when required option -wl not specified~~
+    ```js
+    // need research more this one
+    .requiredOption('-wl, --whitelabel <name>', 'description')
+    ```
 
 ### Added
-- **-url**/**--url** option : sync with specific url, only use for one white label
-- **-log**/**--log** option : enable log console
+- **-u**/**--url** option : sync with specific url, only use for one white label
+- **-l**/**--log** option : enable log console
 - **-t**/**--test** option : sync image from test site
+- **all/all-whitelabel** command : sync all whitelabels
 ### Changed
 - **awls** to **allwls**
 
 ## [0.0.7]
 ### Added
-- Final Report 
+- Final Report
     ```js 
     {
         total: 7,
@@ -107,7 +126,7 @@ All notable changes to this project will be documented in this part.
     // explicit option
     node sync --all-whitelabels
     ```
-- **-www**/**--www** option : sync with www url'
+- **-w**/**--www** option : sync with www url'
 - **-http/--http** option : sync with http protocol
 ### Changed
 - **hasWww = false** is default
