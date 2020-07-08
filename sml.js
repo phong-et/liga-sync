@@ -728,26 +728,7 @@ module.exports = {
 		.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
 		.option('-l, --log', 'enable log mode')
 		.option('-t, --test', 'sync Image from test site')
-
-	program
-		.command('all-whitelabels')
-		.alias('all')
-		.description('sync Images of all whitelabels')
-		//.option("-f, --from <index>", "Sync from index number of whitelabels list")
-		.action(async (_, options) => {
-			log(options)
-			log(_)
-			let whiteLabelNameList = await sync.getActiveWhiteLabel(),
-				fromIndex = options ? options.from : 0
-			await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex })
-		}).on('--help', function () {
-			log('');
-			log('Examples:');
-			log('  $ sync all');
-			log('  $ sync all -f 12');
-		})
 	program.parse(process.argv);
-	await sync.getActiveWhiteLabel()
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
 		if (program.whitelabel) {

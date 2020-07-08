@@ -1,22 +1,4 @@
 ﻿# liga-sync
-
-# Bugs 
-1. http://prntscr.com/sjax7c (process bar break down)
-2. Download file list by while loop, looping can not end with server without any file ???
-3. By adding try catch, program will be stopped although return statement called why ?
-
-# CLI screen results
-1. http://prntscr.com/sjdxpv1 (hasn't log = 0 seconds)
-2. http://prntscr.com/sjdyr11(has log 14s)
-3. http://prntscr.com/sjg85f1 list final
-4. https://prnt.sc/sjh10c1 Synced latest files
-5. http://prntscr.com/sjhq7e1 Done aync multi WL
-6. http://prntscr.com/sjldl41 Deleted files after synced
-7. http://prntscr.com/sk3de31 Sometimes files are missed out. Sometime, the servers don't sync together latest file
-8. http://prntscr.com/srhj101 Sync Images with index of WL list
-9. http://prntscr.com/su3l701 ".download" file type don't define at MINETYPE IIS -> download failed
-10. http://prntscr.com/ta65bx1 latest final report 
-
 # CLI arguments
     -V, --version             output the version number
     -d, --debug               output extra debugging
@@ -35,20 +17,7 @@
             -l, --log            show log info
             -url, --url          sync with specific domain (only using for one WL and must use with -all together)
             -t, --test           sync Image from test site
- # CLI command
-   - all / all-whitelabels 
-      - **Options** :
-        - -f, --from
-      - **Example** :
 
-        ```js
-        // sync all white label list
-        sync all
-        // or
-        sync all-whitelabels
-        // sync all whitelabel from index
-        sync all -f 12
-        ```
 # Sample statements
 ```js
 // sync one WL name
@@ -75,11 +44,11 @@ node sync -wl BANANA -w -http -sp -o
 # Note 
 Sync command line of test site 
 ```js
-node sml -wl BANANA -u bananamain.playplay.com -http -a
+node sync -wl BANANA -u bananamain.playplay.com -http -a
 // or
-node sml -wl BANANA -t
+node sync -wl BANANA -t
 // or
-node sml -wl BANANA --test --log --supper-quick
+node sync -wl BANANA --test --log --supper-quick
 ```
 
 # Change log
@@ -102,7 +71,8 @@ All notable changes to this project will be documented in this part.
 - **-u**/**--url** option : sync with specific url, only use for one white label
 - **-l**/**--log** option : enable log console
 - **-t**/**--test** option : sync image from test site
-- **all/all-whitelabel** command : sync all whitelabels
+- ~~**all/all-whitelabel** command : sync all whitelabels~~
+- New verisoning system
 ### Changed
 - **awls** to **allwls**
 
@@ -170,3 +140,22 @@ All notable changes to this project will be documented in this part.
 
 ## 0.0.1 - 2020-6-1
  - 1st release
+
+#######################################0o0#######################################
+
+# Bugs 
+1. http://prntscr.com/sjax7c (process bar break down)
+2. Download file list by while loop, looping can not end with server without any file ???
+3. By adding try catch, program will be stopped although return statement called why ?
+
+# CLI screen results
+1. http://prntscr.com/sjdxpv1 (hasn't log = 0 seconds)
+2. http://prntscr.com/sjdyr11(has log 14s)
+3. http://prntscr.com/sjg85f1 list final
+4. https://prnt.sc/sjh10c1 Synced latest files
+5. http://prntscr.com/sjhq7e1 Done aync multi WL
+6. http://prntscr.com/sjldl41 Deleted files after synced
+7. http://prntscr.com/sk3de31 Sometimes files are missed out. Sometime, the servers don't sync together latest file
+8. http://prntscr.com/srhj101 Sync Images with index of WL list
+9. http://prntscr.com/su3l701 ".download" file type don't define at MINETYPE IIS -> download failed
+10. http://prntscr.com/ta65bx1 latest final report 
