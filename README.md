@@ -15,10 +15,10 @@
             -f, --from <index>   sync from index of WL list
             -o, --open           open WL's Images folder
             -l, --log            show log info
-            -url, --url          sync with specific domain (only using for one WL and must use with -all together)
+            -url, --url          sync with specific domain (only using for one WL and must use with -all option together)
             -t, --test           sync Image from test site
 
-# Sample statements
+# Common statements
 ```js
 // sync one WL name
 node sync -wl HANAHA
@@ -34,6 +34,15 @@ node sync -wl BANANA -w -o
 
 // sync image by url: http://www. + domain supper quickly then open folder Image too
 node sync -wl BANANA -w -http -sp -o 
+
+// sync  image from test site 
+node sync -wl BANANA -t
+
+// sync image of all active white labels list 
+node sync -allwls
+
+// sync image of all active white label list from index 
+node sync -allwls -f 15
 
 ```
 # Knowledge
@@ -52,8 +61,8 @@ node sync -wl BANANA --test --log --supper-quick
 ```
 
 # Change log
-All notable changes to this project will be documented in this part.
-## [0.0.8r37]
+***All notable changes to this project will be documented in this part.***
+## [0.0.8r45]
 ### Fixed
 - sync all white labels list can be use -f option together
   ```js
@@ -76,7 +85,7 @@ All notable changes to this project will be documented in this part.
 ### Changed
 - **awls** to **allwls**
 
-## [0.0.7]
+## [0.0.7r18]
 ### Added
 - Final Report
     ```js 
@@ -101,7 +110,7 @@ All notable changes to this project will be documented in this part.
 ### Changed
 - **hasWww = false** is default
 
-## [0.0.6]
+## [0.0.6r17]
 ### Fixed bugs 
 - Fixed program is stopped by deleting file not found
 - Final Report list WLs are updated images to Error list
@@ -115,7 +124,7 @@ All notable changes to this project will be documented in this part.
     // explicit option
     node sync -wl BANANA --supper-quick --open
     ```
-## [0.0.5]
+## [0.0.5r15]
 ### Fixed bugs 
 - Uppercase whitelabel name 
 ### Added
@@ -123,7 +132,7 @@ All notable changes to this project will be documented in this part.
 ### Changed
 - **quick** is default sync, disable quick by add -s/--safe
 
-## [0.0.4]
+## [0.0.4r10]
 ### Fixed bugs 
 - Trim space whitelabel name 
 - **--all** option 
@@ -141,7 +150,7 @@ All notable changes to this project will be documented in this part.
 ## 0.0.1 - 2020-6-1
  - 1st release
 
-#######################################0o0#######################################
+#############0o0#############
 
 # Bugs 
 1. http://prntscr.com/sjax7c (process bar break down)
