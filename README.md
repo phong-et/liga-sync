@@ -15,11 +15,29 @@
             -f, --from <index>   sync from index of WL list
             -o, --open           open WL's Images folder
             -l, --log            show log info
-            -url, --url          sync with specific domain (only using for one WL and must use with -all option together)
-            -t, --test           sync Image from test site
+            -u, --url            sync with specific domain (only using for one WL and must use with -all option together)
+            -ft, --from-test           sync Image from test site
 
 # Common statements
 ```js
+// sync image from test site 
+node sync -wl HANABA -ft
+// or 
+node sync -wl HANABA --from-test
+
+// sync image of all active white labels list(in WLs.json)
+node sync -allwls
+// or 
+node sync --all-whitelabels
+
+// sync image of all active white label list from index 
+node sync -allwls -f 15
+
+// sync new wl (whole folder images)
+node sync -wl HANABA -sq
+// or
+node sync -wl HANABA --supper-quick
+
 // sync one WL name
 node sync -wl HANAHA
 
@@ -32,32 +50,21 @@ node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
 // sync image from domain include www and open folder
 node sync -wl BANANA -w -o 
 
-// sync image by url: http://www. + domain supper quickly then open folder Image too
-node sync -wl BANANA -w -http -sp -o 
-
-// sync  image from test site 
-node sync -wl BANANA -t
-
-// sync image of all active white labels list 
-node sync -allwls
-
-// sync image of all active white label list from index 
-node sync -allwls -f 15
+// sync image by url: http://www. + domain then open folder Image too
+node sync -wl BANANA -w -http -o 
 
 ```
-# Knowledge
-1. Remove emty folder by recursive algorithm 
-    - https://gist.github.com/jakub-g/5903dc7e4028133704a4 normal
-    - https://gist.github.com/fixpunkt/fe32afe14fbab99d9feb4e8da7268445 promise
 
-# Note 
+# Tips 
 Sync command line of test site 
 ```js
-node sync -wl BANANA -u bananamain.playplay.com -http -a
+// sync image from test site
+node sync -wl BANANA -u bananamain.playplay.com -http -a -sq
 // or
 node sync -wl BANANA -t
-// or
-node sync -wl BANANA --test --log --supper-quick
+// add some options parameters
+// sync images from test site  show log and open folder after synced
+node sync -wl BANANA --test --log -o
 ```
 
 # Change log
@@ -67,7 +74,7 @@ node sync -wl BANANA --test --log --supper-quick
 - sync all white labels list can be use -f option together
   ```js
   // start sycing from white lable has index is 15
-  node sync -awls -f 15
+  node sync -allwls -f 15
   ```
 - get active white labels in json data not plain text
 - ~~show error message when required option -wl not specified~~
@@ -79,7 +86,7 @@ node sync -wl BANANA --test --log --supper-quick
 ### Added
 - **-u**/**--url** option : sync with specific url, only use for one white label
 - **-l**/**--log** option : enable log console
-- **-t**/**--test** option : sync image from test site
+- **-ft**/**--from-test** option : sync image from test site
 - ~~**all/all-whitelabel** command : sync all whitelabels~~
 - New verisoning system
 ### Changed
@@ -151,7 +158,13 @@ node sync -wl BANANA --test --log --supper-quick
  - 1st release
 
 #############0o0#############
+# Knowledge
+1. Remove emty folder by recursive algorithm 
+    - https://gist.github.com/jakub-g/5903dc7e4028133704a4 normal
+    - https://gist.github.com/fixpunkt/fe32afe14fbab99d9feb4e8da7268445 promise
 
+# Issue
+1. How do sync images from domain config with cloudfire  
 # Bugs 
 1. http://prntscr.com/sjax7c (process bar break down)
 2. Download file list by while loop, looping can not end with server without any file ???

@@ -623,6 +623,8 @@ async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, from
 	log('===================== Final Report =====================')
 	finalReport.latest = [finalReport.latest.length + ' White Labels']
 	log(finalReport)
+	log('===================== command line sync error list again =====================')
+	log('node sync -wl ' + finalReport.error.toString())
 }
 /////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
 async function saveImage(pathImage, host) {
@@ -727,7 +729,7 @@ module.exports = {
 		.option('-o, --open', 'open WL\'s Images folder')
 		.option('-u, --url <url>', 'spectify WL\'s url to sync Images')
 		.option('-l, --log', 'enable log mode')
-		.option('-t, --test', 'sync Image from test site')
+		.option('-ft, --from-test', 'sync Image from test site')
 	program.parse(process.argv);
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
@@ -747,7 +749,7 @@ module.exports = {
 				fromIndex = program.from
 			if (whiteLabelNameList.length === 1) {
 				let whiteLabelName = whiteLabelNameList[0], cliDomain = program.url
-				if (program.test) {
+				if (program.fromTest) {
 					cliDomain = whiteLabelName + "main.playliga.com"
 					sync.setProtocol('http://')
 					isSyncWholeFolder = true
