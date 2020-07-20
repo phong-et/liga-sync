@@ -1,31 +1,13 @@
-const { args } = require('commander')
 
-let cfg = require('./switch.cfg'),
-    log = console.log,
-    rp = require('request-promise'),
-    userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36',
-    contentType = 'application/json',
-    headers = {
-        'User-Agent': userAgent,
-        'Content-type': contentType
-    }
+let log = console.log,
+    sync = require('./sync')
 
-async function getSwitchCfg() {
-    try {
-        return JSON.parse(await rp({
-            uri: cfg.urlProject + 'pgajax.axd?T=GetSwitchCfg',
-            headers: headers
-        }))
-    } catch (error) {
-        log(error)
-    }
-}
 async function getIpServersByWhiteLabelName(name) {
 
     try {
-        let result = await getSwitchCfg(),
-        whiteLabel = result['Clients'][name.toUpperCase()]
-        if(whiteLabel)
+        let result = await sync.getSwitchCfg(),
+            whiteLabel = result['Clients'][name.toUpperCase()]
+        if (whiteLabel)
             return whiteLabel["servers"]
         log('white label don\'t exist')
         return undefined
