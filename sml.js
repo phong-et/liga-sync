@@ -626,6 +626,21 @@ async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, from
 	log('===================== command line sync error list again =====================')
 	log('node sync -wl ' + finalReport.error.toString())
 }
+function cloneImagesOneWL({ files, whiteLabelName, clonePath }) {
+	for (file of files) {
+		let rootPath = cfg.rootPath,
+			srcFile = rootPath + 'Images_WLs\\Images_' + whiteLabelName + '\\' + file.srcName,
+			destFile = (clonePath ? clonePath : rootPath) + 'Images_Clone\\Images_' + whiteLabelName + '\\' + file.destName,
+			destPath = require('path').dirname(destFile)
+		require("shelljs").mkdir("-p", destPath)
+		fs.createReadStream(srcFile).pipe(fs.createWriteStream(destFile));
+		log("Copy " + srcFile + " to " + destFile + " success");
+	}
+}
+function cloneImagesWLs({ files, whiteLabelNameList, clonePath }) {
+	for (whiteLabelName of whiteLabelNameList)
+		cloneImagesOneWL({ files: files, whiteLabelName: whiteLabelName, clonePath: clonePath })
+}
 function toVer(v) {
 	let ver = v.toString()
 	return `${v < 10 ? '0.0.' + v : ver < 100 ? '0.' + ver[0] + '.' + ver[1] : ver[0] + '.' + ver[1] + '.' + ver[2]}`
@@ -653,7 +668,9 @@ module.exports = {
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
 	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
 	saveFile: saveFile,
-	getActiveWhiteLabel: getActiveWhiteLabel
+	getActiveWhiteLabel: getActiveWhiteLabel,
+	cloneImagesOneWL: cloneImagesOneWL,
+	cloneImagesWLs: cloneImagesWLs
 };
 
 (async function () {
@@ -685,6 +702,9 @@ module.exports = {
 		.option('-l, --log', 'enable log mode')
 		.option('-ft, --from-test', 'sync Image from test site')
 	program.parse(process.argv);
+
+	//sync.cloneImagesWLs({ files: [{ srcName: 'btn/others.jpg', destName: 'btn/bg.png' }], whiteLabelNameList: await sync.getActiveWhiteLabel() })
+
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
 		if (program.whitelabel) {
