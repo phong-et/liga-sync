@@ -626,52 +626,6 @@ async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, from
 	log('===================== command line sync error list again =====================')
 	log('node sync -wl ' + finalReport.error.toString())
 }
-/////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
-async function saveImage(pathImage, host) {
-	let rootFolderImages = cfg.rootFolderImages;
-	var fileName = pathImage.split('/').slice(-1)[0];
-	var dir =
-		rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName));
-	//log('fileName:%s',fileName)
-	//log('dir:%s',dir)
-	if (!fs.existsSync(dir)) {
-		var shell = require('shelljs');
-		shell.mkdir('-p', dir);
-	}
-	var url = cfg.protocol + host + pathImage;
-	//log('url:%s',url)
-	//log('rootFolderImages:%s',rootFolderImages)
-	//log('pathImage:%s',pathImage)
-	switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
-		case 'js':
-		case 'css':
-		case 'htm':
-		case 'html':
-			saveFile(rootFolderImages + pathImage, await fetchTextFile(url))
-			break;
-		default:
-			request(url)
-				.on('error', function (err) {
-					log(err);
-				})
-				.pipe(fs.createWriteStream(rootFolderImages + pathImage));
-			break;
-	}
-}
-function saveImages(i, paths, host, next) {
-	let path = paths[i];
-	log('paths[%s]=%s', i, path);
-	this.saveImage(path, host);
-	i = i + 1;
-	if (i < paths.length) {
-		setTimeout(function () {
-			saveImages(i, paths, host, next);
-		}, 10);
-	} else {
-		log('Downloaded %s files in Images folder', paths.length);
-		next()
-	}
-}
 function toVer(v) {
 	let ver = v.toString()
 	return `${v < 10 ? '0.0.' + v : ver < 100 ? '0.' + ver[0] + '.' + ver[1] : ver[0] + '.' + ver[1] + '.' + ver[2]}`

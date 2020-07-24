@@ -69,6 +69,11 @@ node sync -wl BANANA --test --log -o
 
 # Change log
 ***All notable changes to this project will be documented in this part.***
+## [0.0.9r53]
+### Added
+ - Clone Images of WLs 
+    Copy some images in Images folder of some WLs
+
 ## [0.0.8r45]
 ### Fixed
 - sync all white labels list can be use -f option together
