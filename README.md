@@ -4,8 +4,7 @@
     -d, --debug               output extra debugging
     -h, --help                display help for command  
     -allwls, --all-whitelabels  sync all Images in WL list
-    -wl, --whitelabel <name>  specify name of WL, can use WL1,WL2 to for multiple WLs
-       - Sub options of -wl <name>:
+       - Sub options after white label list param:
             -s, --safe           sync latest Images slowly and safely
             -q, --quick          sync latest Images quickly(is default)
             -sq, --supper-quick  sync latest Images supper quickly (Recommeded using for one WL)
@@ -21,9 +20,9 @@
 # Common statements
 ```js
 // sync image from test site 
-node sync -wl HANABA -ft
+node sync HANABA -ft
 // or 
-node sync -wl HANABA --from-test
+node sync HANABA --from-test
 
 // sync image of all active white labels list(in WLs.json)
 node sync -allwls
@@ -34,24 +33,24 @@ node sync --all-whitelabels
 node sync -allwls -f 15
 
 // sync new wl (whole folder images)
-node sync -wl HANABA -sq
+node sync HANABA -sq
 // or
-node sync -wl HANABA --supper-quick
+node sync HANABA --supper-quick
 
 // sync one WL name
-node sync -wl HANAHA
+node sync HANAHA
 
 //sync WL list
-node sync -wl HANAHA,HAHAHA,HABANA,BANANA
+node sync HANAHA,HAHAHA,HABANA,BANANA
 
 // sync WL list from index(start syncing from HABANA)
-node sync -wl HANAHA,HAHAHA,HABANA,BANANA -f 2
+node sync HANAHA,HAHAHA,HABANA,BANANA -f 2
 
 // sync image from domain include www and open folder
-node sync -wl BANANA -w -o 
+node sync BANANA -w -o 
 
 // sync image by url: http://www. + domain then open folder Image too
-node sync -wl BANANA -w -http -o 
+node sync BANANA -w -http -o 
 
 ```
 
@@ -59,16 +58,22 @@ node sync -wl BANANA -w -http -o
 Sync command line of test site 
 ```js
 // sync image from test site
-node sync -wl BANANA -u bananamain.playplay.com -http -a -sq
+node sync BANANA -u bananamain.playplay.com -http -a -sq
 // or
-node sync -wl BANANA -t
-// add some options parameters
-// sync images from test site  show log and open folder after synced
-node sync -wl BANANA --test --log -o
+node sync BANANA -ft
+[updating...]
 ```
 
 # Change log
 ***All notable changes to this project will be documented in this part.***
+
+## [0.1.0r74]
+### Change
+ - Breaking change **-wl** option param
+    - Removed option **-wl**, so all statements don't need add -wl
+    - Old Statement: ```node sync -wl BANANA ```
+    - New statement: ```node sync BANANA```
+
 ## [0.0.9r53]
 ### Added
  - Clone Images of WLs 
@@ -82,7 +87,7 @@ node sync -wl BANANA --test --log -o
   node sync -allwls -f 15
   ```
 - get active white labels in json data not plain text
-- ~~show error message when required option -wl not specified~~
+- ~~show error message when required option not specified~~
     ```js
     // need research more this one
     .requiredOption('-wl, --whitelabel <name>', 'description')
@@ -132,9 +137,9 @@ node sync -wl BANANA --test --log -o
 - Should add more **--open** option to view ensure image synced then type WL's switching command line.
     ```js
     // implicit option
-    node sync -wl BANANA -sq -o
+    node sync BANANA -sq -o
     // explicit option
-    node sync -wl BANANA --supper-quick --open
+    node sync BANANA --supper-quick --open
     ```
 ## [0.0.5r15]
 ### Fixed bugs 

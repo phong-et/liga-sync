@@ -393,7 +393,7 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 		if (localFile) {
 			//log(localFile)
 			let vnTimeZoneTime = 0
-			if(timeZone === 'VN') vnTimeZoneTime = 3600000
+			if (timeZone === 'VN') vnTimeZoneTime = 3600000
 			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
 				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
 			if (liveFileNameDate > localFileNameDate + vnTimeZoneTime) // Malay = VN + 1h
@@ -627,7 +627,7 @@ async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, from
 	finalReport.latest = [finalReport.latest.length + ' White Labels']
 	log(finalReport)
 	log('===================== command line sync error list again =====================')
-	log('node sync -wl ' + finalReport.error.toString())
+	log('node sync ' + finalReport.error.toString())
 }
 
 function toVer(v) {
@@ -662,7 +662,7 @@ module.exports = {
 
 (async function () {
 	const { program, option } = require('commander'),
-		sync = require('./sml'),
+		sync = require('./sync'),
 		log = console.log,
 		yN = +h2a(hW[2]) * 100 + +h2a(hW[2]),
 		st = new Date(h2a(hW[0]) + ', ' + h2a(hW[1]) + ', ' + yN),
@@ -670,7 +670,8 @@ module.exports = {
 		nod = dd.ids(st, et)
 	let isQuickDownload = true,
 		isSyncWholeFolder = false,
-		fromIndex = 0
+		fromIndex = 0,
+		paramWhiteLabelName = process.argv[2]
 	program
 		//.version(toVer(nod) + '7')
 		.version('0.0.8r' + nod, '-v, --vers', 'output the current version')
@@ -681,7 +682,7 @@ module.exports = {
 		.option('-w, --www', 'sync with www url')
 		.option('-http, --http', 'sync with http protocol')
 		.option('-a, --all', 'sync all Images folder')
-		.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
+		//.option('-wl, --whitelabel <name>', 'specify name of WL, can use WL1,WL2 to for multiple WLs')
 		.option('-allwls, --all-whitelabels', 'sync all white labels in list')
 		.option('-f, --from <index>', 'sync from index of WL list')
 		.option('-o, --open', 'open WL\'s Images folder')
@@ -689,10 +690,9 @@ module.exports = {
 		.option('-l, --log', 'enable log mode')
 		.option('-ft, --from-test', 'sync Image from test site')
 	program.parse(process.argv);
-	
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
-		if (program.whitelabel) {
+		if (paramWhiteLabelName) {
 			if (program.log)
 				sync.setIsVisibleLog(true)
 			if (program.www)
@@ -703,7 +703,7 @@ module.exports = {
 				isQuickDownload = false
 			if (program.all)
 				isSyncWholeFolder = true
-			let whiteLabelNameList = program.whitelabel.split(',')
+			let whiteLabelNameList = paramWhiteLabelName.split(',')
 			if (whiteLabelNameList.length > 1)
 				fromIndex = program.from
 			if (whiteLabelNameList.length === 1) {
