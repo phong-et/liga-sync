@@ -25,7 +25,8 @@ let cfg = require('./switch.cfg'),
 	cliColor = require('cli-color'),
 	dd = { ids: function (d1, d2) { let t2 = d2.getTime(), t1 = d1.getTime(); return parseInt((t2 - t1) / (24 * 3600 * 1000)) } },
 	hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('313830')],
-	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 222
+	TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 222,
+	timeZone = cfg.timeZone || 'Malaysia'
 
 /////////////////////////////////////////////////// UTIL FUNC ///////////////////////////////////////////////////
 function cleanEmptyFoldersRecursively(folder) {
@@ -391,9 +392,11 @@ function findUpdatedImageFiles(localImageList, liveImageList) {
 		let localFile = getFileInList(liveFileName, localImageList)
 		if (localFile) {
 			//log(localFile)
+			let vnTimeZoneTime = 0
+			if(timeZone === 'VN') vnTimeZoneTime = 3600000
 			let localFileNameDate = new Date(localFile.fileDateModified).getTime(),
 				liveFileNameDate = new Date(liveImageList[i].fileDateModified).getTime()
-			if (liveFileNameDate > localFileNameDate + 3600000) // Malay = VN + 1h
+			if (liveFileNameDate > localFileNameDate + vnTimeZoneTime) // Malay = VN + 1h
 				result.updatedFiles.push(liveFileName)
 		}
 		else result.newFiles.push(liveFileName)
@@ -626,52 +629,7 @@ async function syncImagesWLsSafely({ whiteLabelNameList, isSyncWholeFolder, from
 	log('===================== command line sync error list again =====================')
 	log('node sync -wl ' + finalReport.error.toString())
 }
-/////////////////////////// FOR OLD SWITCH - DON'T USE ////////////////
-async function saveImage(pathImage, host) {
-	let rootFolderImages = cfg.rootFolderImages;
-	var fileName = pathImage.split('/').slice(-1)[0];
-	var dir =
-		rootFolderImages + pathImage.substring(0, pathImage.indexOf(fileName));
-	//log('fileName:%s',fileName)
-	//log('dir:%s',dir)
-	if (!fs.existsSync(dir)) {
-		var shell = require('shelljs');
-		shell.mkdir('-p', dir);
-	}
-	var url = cfg.protocol + host + pathImage;
-	//log('url:%s',url)
-	//log('rootFolderImages:%s',rootFolderImages)
-	//log('pathImage:%s',pathImage)
-	switch (fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length)) {
-		case 'js':
-		case 'css':
-		case 'htm':
-		case 'html':
-			saveFile(rootFolderImages + pathImage, await fetchTextFile(url))
-			break;
-		default:
-			request(url)
-				.on('error', function (err) {
-					log(err);
-				})
-				.pipe(fs.createWriteStream(rootFolderImages + pathImage));
-			break;
-	}
-}
-function saveImages(i, paths, host, next) {
-	let path = paths[i];
-	log('paths[%s]=%s', i, path);
-	this.saveImage(path, host);
-	i = i + 1;
-	if (i < paths.length) {
-		setTimeout(function () {
-			saveImages(i, paths, host, next);
-		}, 10);
-	} else {
-		log('Downloaded %s files in Images folder', paths.length);
-		next()
-	}
-}
+
 function toVer(v) {
 	let ver = v.toString()
 	return `${v < 10 ? '0.0.' + v : ver < 100 ? '0.' + ver[0] + '.' + ver[1] : ver[0] + '.' + ver[1] + '.' + ver[2]}`
@@ -699,7 +657,7 @@ module.exports = {
 	//fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
 	//findUpdatedImageFilesWL: findUpdatedImageFilesWL
 	saveFile: saveFile,
-	getActiveWhiteLabel: getActiveWhiteLabel
+	getActiveWhiteLabel: getActiveWhiteLabel,
 };
 
 (async function () {
@@ -731,6 +689,7 @@ module.exports = {
 		.option('-l, --log', 'enable log mode')
 		.option('-ft, --from-test', 'sync Image from test site')
 	program.parse(process.argv);
+	
 	if (program.debug) console.log(program.opts())
 	if (nod < +h2a(hW[3]))
 		if (program.whitelabel) {
