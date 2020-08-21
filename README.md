@@ -69,6 +69,11 @@ node sync -wl BANANA --test --log -o
 
 # Change log
 ***All notable changes to this project will be documented in this part.***
+## [0.0.9r81]
+### Fixed
+ - Comparing algorithm (Sometime Malaysia team can't sync latest image)
+    - Add **timezone** at switch.cfg (default as Malaysia, VN team need set key **timezone :'VN'**
+
 ## [0.0.9r53]
 ### Added
  - Clone Images of WLs 
