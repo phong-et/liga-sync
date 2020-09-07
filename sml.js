@@ -418,9 +418,9 @@ async function fetchAllImagePathsFromLocal(whiteLabelName) {
 	if (isVisibleLog) log('Done -> fetchAllImagePathsFromLocal(): %s', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
-async function fetchAllImagePathsFromLive(whiteLabelName) {
+async function fetchAllImagePathsFromLive(whiteLabelName, cliDomain) {
 	whiteLabelName = whiteLabelName.toUpperCase()
-	let domain = await getDomain(whiteLabelName),
+	let domain = cliDomain ? cliDomain: await getDomain(whiteLabelName),
 		d1 = new Date().getTime(),
 		host = includeWww() + (domain ? domain : whiteLabelName + '.com'),
 		protocol = cfg.protocol,
@@ -432,11 +432,11 @@ async function fetchAllImagePathsFromLive(whiteLabelName) {
 	if (isVisibleLog) log('Done -> fetchAllImagePathsFromLive(): ', msToTime(miliseconds, 'ss.mmm'))
 	return paths
 }
-async function findUpdatedImageFilesWL(whiteLabelName, index) {
+async function findUpdatedImageFilesWL(whiteLabelName, index, cliDomain) {
 	log('___________________________')
 	log('[%s] Syncing %s Images files...', index ? index : 0, whiteLabelName)
 	let localImageList = await fetchAllImagePathsFromLocal(whiteLabelName),
-		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName)
+		liveImageList = await fetchAllImagePathsFromLive(whiteLabelName, cliDomain)
 	if (liveImageList.length > 0)
 		return findUpdatedImageFiles(localImageList, liveImageList)
 	return []
@@ -583,7 +583,7 @@ async function syncImagesOneWLSafely({ whiteLabelName, isSyncWholeFolder, index,
 			await downloadFilesSyncWhile(paths, host, syncFolder)
 	}
 	else {
-		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index)
+		let fileList = await findUpdatedImageFilesWL(whiteLabelName, index, cliDomain)
 		if (fileList.length === 0) {
 			log(cliColor.red('X Has some errors !'))
 			status = 3

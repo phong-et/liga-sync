@@ -73,6 +73,7 @@ node sync -wl BANANA --test --log -o
 ### Fixed
  - Comparing algorithm (Sometime Malaysia team can't sync latest image)
     - Add **timezone** at switch.cfg (default as Malaysia, VN team need set key **timezone :'VN'**
+ - **url** option missing in case sync only one WL
 
 ## [0.0.9r53]
 ### Added
