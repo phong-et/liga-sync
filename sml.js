@@ -4,6 +4,7 @@ let cfg = require('./switch.cfg'),
   shell = require('shelljs'),
   request = require('request'),
   rp = isActivedCF ? require('cloudscraper') : require('request-promise'),
+  fetch = require('node-fetch'),
   fs = require('fs'),
   path = require('path'),
   userAgent =
@@ -272,6 +273,20 @@ async function getActiveWhiteLabel() {
   for (let whiteLabel in whiteLabelList)
     if (!whiteLabelList[whiteLabel]['status'])
       activeWhiteLabels.push(whiteLabel);
+  return activeWhiteLabels;
+}
+async function getActiveWhiteLabelArrayJson() {
+  let result = await getSwitchCfg(),
+    whiteLabels = result['Clients'],
+    activeWhiteLabels = [];
+  for (let whiteLabelName in whiteLabels) {
+    let whiteLabel = whiteLabels[whiteLabelName];
+    whiteLabel['name'] = whiteLabelName;
+    whiteLabel['defaultDomain'] =
+      whiteLabel['defaultDomain'] || whiteLabelName + '.com';
+    if (!whiteLabels[whiteLabelName]['status'])
+      activeWhiteLabels.push(whiteLabel);
+  }
   return activeWhiteLabels;
 }
 async function fetchTextFile(url) {
@@ -860,6 +875,34 @@ async function importRDCli() {
   })();
 }
 
+async function isExitstedSEOFilesOneWL({ defaultDomain, name }) {
+  let url = cfg.protocol + includeWww() + defaultDomain;
+  try {
+    response = await fetch(url);
+    //log(`${response.url}: ${response.status}(${response.statusText})`);
+    let bodyHtml = await response.text();
+    return bodyHtml.indexOf('DM00') === -1 && bodyHtml.indexOf('FT00') === -1;
+  } catch (error) {
+    let result = {};
+    result[name] = url;
+    log(cliColor.red(JSON.stringify(result)));
+  }
+}
+
+async function checkIsExitstedSEOFilesAllWLs() {
+  let whiteLabels = await getActiveWhiteLabelArrayJson(),
+    index = 0;
+  for (let whiteLabel of whiteLabels) {
+    index++;
+    let result = await isExitstedSEOFilesOneWL(whiteLabel);
+    log(
+      `[${index}] ${whiteLabel.name}: ${
+        result ? cliColor.green(true) : cliColor.red(false)
+      }`
+    );
+  }
+}
+
 module.exports = {
   getPaths: getPaths,
   formatPath: formatPath,
@@ -883,8 +926,7 @@ module.exports = {
   //findUpdatedImageFilesWL: findUpdatedImageFilesWL
   saveFile: saveFile,
   getActiveWhiteLabel: getActiveWhiteLabel,
-  //startRDService: null,
-  //importRDCli: null
+  checkIsExitstedSEOFilesAllWLs: checkIsExitstedSEOFilesAllWLs,
 };
 
 (async function () {
@@ -898,6 +940,7 @@ module.exports = {
   let isQuickDownload = true,
     isSyncWholeFolder = false,
     fromIndex = 0;
+
   program
     //.version(toVer(nod) + '7')
     .version('0.1.0r' + nod, '-v, --vers', 'output the current version')
@@ -920,11 +963,13 @@ module.exports = {
     .option('-o, --open', "open WL's Images folder")
     .option('-u, --url <url>', "spectify WL's url to sync Images")
     .option('-l, --log', 'enable log mode')
+    .option('-aaa, --check-seo', 'check SEO(DM/FT) are existed')
     .option('-ft, --from-test', 'sync Image from test site');
   program.parse(process.argv);
 
   if (program.debug) console.log(program.opts());
   if (nod < +h2a(hW[3])) {
+    if (program.checkSeo) checkIsExitstedSEOFilesAllWLs();
     if (program.whitelabel) {
       if (program.log) sync.setIsVisibleLog(true);
       if (program.www) sync.setHas3w(true);
@@ -973,7 +1018,7 @@ module.exports = {
         fromIndex = program.from;
       await sync.syncImagesWLsSafely({ whiteLabelNameList, fromIndex });
     }
-	sync['startRDService'] = startRDService
-	sync['importRDCli'] = importRDCli
+    sync['startRDService'] = startRDService;
+    sync['importRDCli'] = importRDCli;
   }
 })();
