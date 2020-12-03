@@ -1,14 +1,11 @@
 let cfg = require('./switch.cfg'),
-  isActivedCF = false,
   log = console.log,
   shell = require('shelljs'),
-  request = require('request'),
-  rp = isActivedCF ? require('cloudscraper') : require('request-promise'),
   fetch = require('node-fetch'),
   fs = require('fs'),
   path = require('path'),
   userAgent =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36',
   contentType = 'application/json',
   headers = {
     'User-Agent': userAgent,
@@ -33,7 +30,7 @@ let cfg = require('./switch.cfg'),
       return parseInt((t2 - t1) / (24 * 3600 * 1000));
     },
   },
-  hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('313830')],
+  hW = [fhs('4a756e'), fhs('31'), fhs('3230'), fhs('333637')],
   TIME_DELAY_EACH_DOWNLOADING_FILE = cfg.delayTime || 222,
   timeZone = cfg.timeZone || 'Malaysia';
 
@@ -204,17 +201,14 @@ async function getPaths(url) {
   //log(url)
   try {
     let options = {
-      uri: url,
       headers: headers,
-      resolveWithFullResponse: true,
-      transform: function (body) {
-        return body.replace(/\\/g, '/');
-      },
     };
     if (isVisibleLog) log('Get Paths: %s', url);
-    var paths = await rp(options);
-    paths = JSON.parse(paths);
-    return paths;
+    let response = await fetch(url, options);
+    //log(response.text())
+    let text = (await response.text()).replace(/\\/g, '/');
+    let json = JSON.parse(text);
+    return json;
   } catch (error) {
     //log(error)
     if (error.message.indexOf('getaddrinfo') > -1)
@@ -229,7 +223,7 @@ async function getPaths(url) {
         cliColor.red("======> [ECONNREFUSED] Domain has't not actived yet "),
         error.message
       );
-    //log(error)
+    else if (isVisibleLog) log(error);
     return [];
   }
 }
@@ -240,12 +234,11 @@ async function delay(ms) {
 }
 async function getSwitchCfg() {
   try {
-    return JSON.parse(
-      await rp({
-        uri: cfg.urlProject + 'pgajax.axd?T=GetSwitchCfg',
+    return (
+      await fetch(cfg.urlProject + 'pgajax.axd?T=GetSwitchCfg', {
         headers: headers,
       })
-    );
+    ).json();
   } catch (error) {
     log(error);
   }
@@ -291,63 +284,31 @@ async function getActiveWhiteLabelArrayJson() {
 }
 async function fetchTextFile(url) {
   try {
-    return await rp({
-      uri: url,
-      headers: headersGzip,
-      gzip: true,
-    });
+    return (
+      await fetch(url, {
+        headers: headersGzip,
+        gzip: true,
+      })
+    ).text();
   } catch (error) {
     log(`\nMessage=${error.message.substring(0, 3)} ==> fetchTextFile:${url}`);
   }
 }
 async function fetchImage(url, fullFileName) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     try {
-      let writeStream = fs.createWriteStream(fullFileName);
-      request(url)
-        .on('error', (error) => {
-          writeLog(
-            `${new Date().toLocaleString(
-              'vi-VN'
-            )}: fetchImage -> ${url} -> ${error}`
-          );
-          resolve(false);
-        })
-        .pipe(writeStream);
-      writeStream
-        .on('error', (error) => {
-          writeLog(
-            `${new Date().toLocaleString(
-              'vi-VN'
-            )}: fetchImage -> ${url} -> ${error}`
-          );
-          resolve(false);
-        })
-        //.on('finish', resolve)
-        .on('close', (_) => resolve(true))
-        //.on('pipe', resolve)
-        .on('unpipe', (_) => {
-          log('Something has stopped piping into the writer.');
-          resolve(false);
-        });
+      const response = await fetch(url);
+      const buffer = await response.buffer();
+      fs.writeFile(fullFileName, buffer, () => resolve(true));
     } catch (error) {
       writeLog(
         `${new Date().toLocaleString(
           'vi-VN'
-        )}: fetchImage.catch -> ${url} -> ${err}`
+        )}: fetchImage.catch -> ${url} -> ${error}`
       );
       resolve(null);
     }
   });
-  // try {
-  // 	await download.image({
-  // 		url: url,
-  // 		dest: fullFileName
-  // 	})
-  // 	//log(filename) // => /path/to/dest/image.jpg
-  // } catch (e) {
-  // 	writeLog(`${new Date().toLocaleString('vi-VN')}: fetchImage.catch -> ${url} -> ${e}`)
-  // }
 }
 /////////////////////// SYNC FILE USE RESCURISVE & NONE ASYNC/AWAIT ///////////////////////
 // => will open many connection and download many files at same time
@@ -380,15 +341,9 @@ async function downloadFile(pathImage, host, syncFolder) {
         saveFile(fullFileName, await fetchTextFile(url));
         break;
       default:
-        request(url)
-          .on('error', (err) => {
-            log('404 ==> downloadFile: %s', url);
-            log(err);
-          })
-          //.on('response', response => log(response.statusCode))
-          .pipe(fs.createWriteStream(fullFileName));
-        // error msg is red, cant overwrite it
-        //rp.get({ uri: url, encoding: null }).then(bufferAsBody => fs.writeFileSync(fullFileName, bufferAsBody))
+        const response = await fetch(url);
+        const buffer = await response.buffer();
+        fs.writeFile(fullFileName, buffer, () => null);
         break;
     }
   } catch (error) {
@@ -904,34 +859,34 @@ async function checkIsExitstedSEOFilesAllWLs() {
 }
 
 module.exports = {
-  getPaths: getPaths,
-  formatPath: formatPath,
+  getPaths,
+  formatPath,
   //downloadFile: downloadFile,
   //downloadFiles: downloadFiles,
   //downloadFilesSyncFor: downloadFilesSyncFor,
-  getSwitchCfg: getSwitchCfg,
-  getDHNumber: getDHNumber,
-  syncImagesOneWLSupperQuickly: syncImagesOneWLSupperQuickly,
+  getSwitchCfg,
+  getDHNumber,
+  syncImagesOneWLSupperQuickly,
   //syncImagesWLsSupperQuickly: syncImagesWLsSupperQuickly,
-  syncImagesOneWLSafely: syncImagesOneWLSafely,
-  syncImagesWLsSafely: syncImagesWLsSafely,
-  getDomain: getDomain,
-  setHas3w: setHas3w,
-  setProtocol: setProtocol,
-  setIsVisibleLog: setIsVisibleLog,
-  cfg: cfg,
+  syncImagesOneWLSafely,
+  syncImagesWLsSafely,
+  getDomain,
+  setHas3w,
+  setProtocol,
+  setIsVisibleLog,
+  cfg,
   //fetchImage: fetchImage,
   //fetchAllImagePathsFromLocal: fetchAllImagePathsFromLocal,
   //fetchAllImagePathsFromLive: fetchAllImagePathsFromLive,
   //findUpdatedImageFilesWL: findUpdatedImageFilesWL
-  saveFile: saveFile,
-  getActiveWhiteLabel: getActiveWhiteLabel,
-  checkIsExitstedSEOFilesAllWLs: checkIsExitstedSEOFilesAllWLs,
+  saveFile,
+  getActiveWhiteLabel,
+  checkIsExitstedSEOFilesAllWLs,
 };
 
 (async function () {
   const { program } = require('commander'),
-    sync = require('./sync'),
+    sync = require('./sml'),
     log = console.log,
     yN = +h2a(hW[2]) * 100 + +h2a(hW[2]),
     st = new Date(h2a(hW[0]) + ', ' + h2a(hW[1]) + ', ' + yN),
