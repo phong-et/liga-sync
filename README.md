@@ -78,6 +78,12 @@ node sync -wl BANANA --test --log -o
 
 ***All notable changes to this project will be documented in this part.***
 
+## [0.1.1r185]
+
+### Changed
+
+- Change ```request``` and ```request-promise``` to ```node-fetch``` because of [deprecated issue](<https://github.com/request/request/issues/3142>)
+
 ## [0.1.0r115]
 
 ### Added
@@ -264,3 +270,6 @@ node sync -wl BANANA --test --log -o
 8. <http://prntscr.com/srhj101> Sync Images with index of WL list
 9. <http://prntscr.com/su3l701> ".download" file type don't define at MINETYPE IIS -> download failed
 10. <http://prntscr.com/ta65bx1> latest final report
+
+## Notes
+
